@@ -1,0 +1,151 @@
+name: Windows tests and portable build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_MEDIA_BACKEND: ffmpeg
+      PYTHONUTF8: '1'
+      PYTHONUNBUFFERED: '1'
+
+    steps:
+      # Upstream action definitions are linked in docs/development.md.
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Python 3.12 security releases have no official Windows installers.
+      # uv supplies the pinned standalone build instead of downgrading Python.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.13.4'
+          python-version: '3.12.14'
+          python-arch: x86_64
+          enable-cache: true
+
+      - name: Install fixed dependencies
+        run: |
+          uv venv --python 3.12.14 --seed .venv
+          if ($LASTEXITCODE -ne 0) { throw "Failed to create virtual environment" }
+          .\.venv\Scripts\python.exe -c "import sys; assert sys.version_info[:3] == (3, 12, 14), sys.version"
+          if ($LASTEXITCODE -ne 0) { throw "Unexpected Python runtime" }
+          .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          .\.venv\Scripts\python.exe -VV
+          .\.venv\Scripts\python.exe -m pip freeze | Set-Content -Encoding utf8 artifacts\dependencies.txt
+
+      - name: Full regression suite including real decoding and deadlock subprocess
+        timeout-minutes: 8
+        run: |
+          .\.venv\Scripts\python.exe -m pytest tests -q -o faulthandler_timeout=30 --junitxml=artifacts\tests.xml
+          if ($LASTEXITCODE -ne 0) { throw "Regression suite failed" }
+
+      - name: Isolated real decoder hover seek
+        timeout-minutes: 3
+        env:
+          GRIDSTUDIO_REAL_HOVER_SEEK: '1'
+        run: |
+          .\.venv\Scripts\python.exe -m pytest tests/test_hover_controls.py::test_real_video_hover_seek_updates_paused_decoder_frame -q -o faulthandler_timeout=30 --junitxml=artifacts\hover-seek.xml
+          if ($LASTEXITCODE -ne 0) { throw "Real hover seek failed" }
+
+      - name: Isolated real decoder transport and audio controls
+        timeout-minutes: 3
+        env:
+          GRIDSTUDIO_REAL_HOVER_TRANSPORT: '1'
+        run: |
+          .\.venv\Scripts\python.exe -m pytest tests/test_hover_transport.py::test_real_media_buttons_play_pause_and_volume_update_audio -q -o faulthandler_timeout=30 --junitxml=artifacts\hover-transport.xml
+          if ($LASTEXITCODE -ne 0) { throw "Real hover transport failed" }
+
+      - name: Build complete portable application
+        timeout-minutes: 10
+        run: .\build.ps1
+
+      - name: Verify bundled files, license hashes and executable startup
+        timeout-minutes: 2
+        run: |
+          $expectedVersion = .\.venv\Scripts\python.exe -c "from gridstudio import __version__; print(__version__)"
+          $versionInfo = (Get-Item -LiteralPath dist\GridStudio\GridStudio.exe).VersionInfo
+          if ($versionInfo.FileVersion -ne $expectedVersion -or $versionInfo.ProductVersion -ne $expectedVersion) {
+              throw "Windows executable version does not match the application version"
+          }
+          @'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+
+          from PySide6.QtGui import QImage
+          from gridstudio import __version__
+
+          project = Path.cwd()
+          bundle = project / "dist" / "GridStudio"
+          required = ["GridStudio.exe", "README.txt", "CHANGELOG.md", "LICENSE", "THIRD_PARTY_NOTICES.txt",
+                      "INTERACTION_PERFORMANCE.txt", "PERFORMANCE.json", "VALIDATION.md",
+                      "licenses/SOURCES.json", "demo/sample.mp4",
+                      "demo/sample-short.mp4", "demo/自由画布与图层.gstudio"]
+          for relative in required:
+              assert (bundle / relative).is_file(), f"Missing bundled file: {relative}"
+          for pattern in ("Qt6Core.dll", "Qt6Multimedia.dll", "avcodec-*.dll", "avformat-*.dll"):
+              assert any((bundle / "_internal").rglob(pattern)), f"Missing runtime: {pattern}"
+          for forbidden in ("icuuc.dll", "icudt78.dll"):
+              assert not any((bundle / "_internal").rglob(forbidden)), f"Unexpected shadowed system DLL: {forbidden}"
+          manifest = json.loads((bundle / "licenses/SOURCES.json").read_text(encoding="utf-8"))
+          for name, record in manifest.items():
+              data = (bundle / "licenses" / name).read_bytes()
+              assert len(data) == record["bytes"], f"License length mismatch: {name}"
+              assert hashlib.sha256(data).hexdigest() == record["sha256"], f"License hash mismatch: {name}"
+          image_path = project / "artifacts" / "portable-smoke.png"
+          environment = dict(os.environ)
+          environment.pop("PYTHONPATH", None)
+          subprocess.run([str(bundle / "GridStudio.exe"), "--smoke-test", str(image_path),
+                          str(bundle / "demo/自由画布与图层.gstudio")],
+                         cwd=bundle, env=environment, timeout=30, check=True)
+          image = QImage(str(image_path))
+          assert not image.isNull() and image.width() >= 600 and image.height() >= 400, "Invalid portable smoke capture"
+          diagnostics = image_path.with_suffix(".json")
+          assert diagnostics.is_file(), "Missing portable media smoke diagnostics"
+          report = json.loads(diagnostics.read_text(encoding="utf-8"))
+          assert report["version"] == __version__ and report["passed"] and report["capture_saved"], report
+          assert len(report["media"]) == 3 and all(item["frame_valid"] and item["error"] == "NoError"
+                                                and item["duration_ms"] > 0 for item in report["media"]), report
+          assert all(Path(item["source"]).name == item["source"] for item in report["media"]), report
+          print("Portable files, license hashes, capture and decoded media verified.")
+          '@ | .\.venv\Scripts\python.exe -
+          if ($LASTEXITCODE -ne 0) { throw "Portable verification failed" }
+
+      - name: Upload verification logs and smoke capture
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-test-results
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload verified portable directory
+        uses: actions/upload-artifact@v6
+        with:
+          name: GridStudio-Windows-x64
+          path: dist/GridStudio/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

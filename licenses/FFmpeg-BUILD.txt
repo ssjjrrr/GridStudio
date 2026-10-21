@@ -1,0 +1,16 @@
+FFmpeg bundled by PySide6 6.10.2 Windows x64
+=========================================
+
+The following values were read from the shipped avutil-59.dll API.
+
+av_version_info(): 7.1.2
+avutil_license(): LGPL version 2.1 or later
+avutil_configuration():
+--prefix=/c/FFmpeg-n7.1.2/build/msvc/installed --disable-programs --disable-doc --disable-debug --enable-network --disable-lzma --enable-pic --disable-vulkan --disable-v4l2-m2m --disable-decoder=truemotion1 --enable-zlib --extra-cflags='-IC:/zlib-1.3.1/build/amd64' --extra-ldflags='-LIBPATH:C:/zlib-1.3.1/build/amd64' --toolchain=msvc --enable-shared --disable-static
+
+These paths describe the upstream library build machine; they are not paths
+on the end user's computer. No FFmpeg libraries were modified by GridStudio.
+
+Matching source:
+https://github.com/FFmpeg/FFmpeg/tree/n7.1.2
+https://github.com/madler/zlib/tree/v1.3.1

@@ -1,0 +1,302 @@
+{
+  "from_version": "internal baseline",
+  "to_version": "pre-release candidate",
+  "environment": {
+    "platform": "Windows 11 x64",
+    "qt": "6.10.2",
+    "window_logical_size": [
+      1280,
+      720
+    ],
+    "scale": 1.25
+  },
+  "workspace": {
+    "before": {
+      "panes": 16,
+      "copy_delete_cycles": 20,
+      "membership_ms": [
+        5132.1608000434935,
+        5209.81569995638,
+        5074.694900016766
+      ],
+      "membership_median_ms": 5132.1608000434935,
+      "retained_layer_events": {
+        "Hide": 640,
+        "ParentChange": 1280,
+        "Show": 640
+      },
+      "selection_1000_median_ms": 10.000200010836124,
+      "ordinary_idle_timer_ticks": [
+        13,
+        13,
+        15
+      ]
+    },
+    "after": {
+      "panes": 16,
+      "copy_delete_cycles": 20,
+      "membership_ms": [
+        486.4204000332393,
+        497.88350000744686,
+        522.2167000174522
+      ],
+      "membership_median_ms": 497.88350000744686,
+      "retained_layer_events": {},
+      "selection_1000_median_ms": 1.25039997510612,
+      "ordinary_idle_timer_ticks": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "interaction_4k_synthetic": {
+    "before": {
+      "move": {
+        "total_ms": [
+          147.36639999318868,
+          165.4879999696277,
+          171.59690003609285
+        ],
+        "median_ms": 165.4879999696277,
+        "final_geometry": [
+          562,
+          264,
+          512,
+          288
+        ]
+      },
+      "resize": {
+        "total_ms": [
+          235.6846000184305,
+          230.64229998271912,
+          252.20029999036342
+        ],
+        "median_ms": 235.6846000184305,
+        "final_geometry": [
+          448,
+          202,
+          626,
+          375
+        ]
+      },
+      "source_sha256": {
+        "app.py": "6b8e0dd9597474720599bef6a11fb9c2a7c2ecc1800ef5b9ba0a661cdbadd999",
+        "free_canvas.py": "c3d71062248a998c97cb7685e5dd8a49d3cd604e11d0fdabd1c6f507227bf3c3",
+        "hover_controls.py": "fd9a272ad8e6513b0705b64867a254b373c158271e172e5b0143c5f853346ab5",
+        "canvas.py": "59ac1f8b354d2da58406db1a1be5ef17fa10a2172de22f62f555cb8535de1f6a"
+      }
+    },
+    "after": {
+      "move": {
+        "total_ms": [
+          154.6161999576725,
+          167.22259996458888,
+          155.4364999756217
+        ],
+        "median_ms": 155.4364999756217,
+        "final_geometry": [
+          562,
+          264,
+          512,
+          288
+        ]
+      },
+      "resize": {
+        "total_ms": [
+          217.28099999018013,
+          243.64270002115518,
+          224.6782000293024
+        ],
+        "median_ms": 224.6782000293024,
+        "final_geometry": [
+          448,
+          202,
+          626,
+          375
+        ]
+      },
+      "source_sha256": {
+        "app.py": "42b0296cc68c666d8c1de40bb49d198a4c0a9cd6d3b6d2bc3eb592cfbf8892ce",
+        "free_canvas.py": "b57b7d75e1339026b53aea9eb67e5b7b44e7960c97b95b243fcce9fb7c55b9d7",
+        "hover_controls.py": "311c2eab99fb2203336ec31e314211ed58c2127dba6eb01b162b411bc4f71c73",
+        "canvas.py": "f4382c4f96311729b756f3460606cbe637bc4f4258297103d3b9f5ff8861dca6"
+      }
+    }
+  },
+  "playback_query_counts": {
+    "note": "Native getter-equivalent call counts from pure Python fake players. 50 ticks represent one second at20ms; not a CPU or media decoder benchmark.",
+    "sources": {
+      "baseline": {
+        "sha256": "b25c06515e3c17433622bf5b6926bfc5a13a821491148c075da69aa98f8bdbcc"
+      },
+      "after": {
+        "sha256": "100826609fa93b47f2a54ab2513bd5fe0583a96a093b5077319504af52fdb953"
+      }
+    },
+    "scenarios": {
+      "64_independent_50_ticks": {
+        "baseline": {
+          "queries": {
+            "duration": 3200
+          },
+          "total_queries": 3200,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {},
+          "total_queries": 0,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": false
+        }
+      },
+      "8_paused_percent_50_ticks": {
+        "baseline": {
+          "queries": {
+            "duration": 2500,
+            "position": 50,
+            "mediaStatus": 400
+          },
+          "total_queries": 2950,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {},
+          "total_queries": 0,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": false
+        }
+      },
+      "8_playing_percent_50_ticks": {
+        "baseline": {
+          "queries": {
+            "duration": 2850,
+            "position": 400,
+            "mediaStatus": 400,
+            "playbackState": 350
+          },
+          "total_queries": 4000,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {
+            "duration": 400,
+            "position": 400,
+            "mediaStatus": 400,
+            "playbackState": 350
+          },
+          "total_queries": 1550,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        }
+      },
+      "8_playing_percent_ab_50_ticks": {
+        "baseline": {
+          "queries": {
+            "duration": 3250,
+            "position": 400,
+            "mediaStatus": 400,
+            "playbackState": 350
+          },
+          "total_queries": 4400,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {
+            "duration": 400,
+            "position": 400,
+            "mediaStatus": 400,
+            "playbackState": 350
+          },
+          "total_queries": 1550,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        }
+      },
+      "join_8_percent": {
+        "baseline": {
+          "queries": {
+            "duration": 114,
+            "position": 10,
+            "playbackState": 8
+          },
+          "total_queries": 132,
+          "apply_state_calls": 24,
+          "inspector_refreshes": 3,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {
+            "duration": 24,
+            "position": 10,
+            "playbackState": 8
+          },
+          "total_queries": 42,
+          "apply_state_calls": 8,
+          "inspector_refreshes": 1,
+          "timer_active_after_action": true
+        }
+      },
+      "media_ready_8_percent": {
+        "baseline": {
+          "queries": {
+            "duration": 114,
+            "position": 9,
+            "playbackState": 8
+          },
+          "total_queries": 131,
+          "apply_state_calls": 16,
+          "inspector_refreshes": 2,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {
+            "duration": 24,
+            "position": 9,
+            "playbackState": 8
+          },
+          "total_queries": 41,
+          "apply_state_calls": 8,
+          "inspector_refreshes": 1,
+          "timer_active_after_action": true
+        }
+      },
+      "seek_8_percent": {
+        "baseline": {
+          "queries": {
+            "duration": 65,
+            "position": 8
+          },
+          "total_queries": 73,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        },
+        "after": {
+          "queries": {
+            "duration": 8,
+            "position": 8
+          },
+          "total_queries": 16,
+          "apply_state_calls": 0,
+          "inspector_refreshes": 0,
+          "timer_active_after_action": true
+        }
+      }
+    }
+  },
+  "limits": "Workspace and interaction measurements use synthetic frames without decoders. Three serial before/after runs. Workspace samples were collected before the cosmetic version bump. Small drag/resize median differences are comparable to run-to-run variability, not a material speed guarantee. Playback counts use fake players, not CPU/FPS. No screenshot per measured event.",
+  "note": "Existing measurements collected from internal source snapshots before the 1.0.0 release. The pre-release candidate uses the same relevant implementation as the release; only comparison labels and release text have been updated. No benchmarks were rerun for this relabeling. Original measurements and measured source hashes are preserved; these hashes identify the actual measured snapshots, not the relabeled release files."
+}

@@ -1,0 +1,33 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Generated build and verification outputs
+/build/
+/dist/
+/artifacts/
+/outputs/
+/test-results/
+/benchmarks/interaction-bench.json
+/interaction*.json
+/final.png
+*.log
+*.dmp
+
+# Local editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local credentials are never project inputs
+.env
+.env.*
+!.env.example

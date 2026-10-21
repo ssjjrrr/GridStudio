@@ -1,0 +1,154 @@
+{
+  "format": "gridstudio",
+  "version": 1,
+  "panes": [
+    {
+      "id": "c491d81b8ab34b3b861c6cfca5b83ddc",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "contain",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    },
+    {
+      "id": "75ecdba32f2d4cf5a3c39f0b3fc6a4e1",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.2,
+        0.15,
+        0.6,
+        0.6
+      ],
+      "fit_mode": "contain",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    },
+    {
+      "id": "6c7c7400e4564f818a59b6c0bf9474bf",
+      "source": "sample.mp4",
+      "rotation": 90,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "contain",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    },
+    {
+      "id": "94a8ad30b3174c4cb393039b1ab61a7d",
+      "source": "sample.mp4",
+      "rotation": 270,
+      "crop": [
+        0.1,
+        0.1,
+        0.5,
+        0.75
+      ],
+      "fit_mode": "contain",
+      "flip_h": true,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    }
+  ],
+  "layout": {
+    "axis": "vertical",
+    "sizes": [
+      1.0,
+      1.0
+    ],
+    "children": [
+      {
+        "axis": "horizontal",
+        "sizes": [
+          1.0,
+          1.0
+        ],
+        "children": [
+          {
+            "pane": "c491d81b8ab34b3b861c6cfca5b83ddc"
+          },
+          {
+            "pane": "75ecdba32f2d4cf5a3c39f0b3fc6a4e1"
+          }
+        ]
+      },
+      {
+        "axis": "horizontal",
+        "sizes": [
+          1.0,
+          1.0
+        ],
+        "children": [
+          {
+            "pane": "6c7c7400e4564f818a59b6c0bf9474bf"
+          },
+          {
+            "pane": "94a8ad30b3174c4cb393039b1ab61a7d"
+          }
+        ]
+      }
+    ]
+  },
+  "layout_mode": "grid"
+}

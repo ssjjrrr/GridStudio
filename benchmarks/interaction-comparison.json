@@ -1,0 +1,206 @@
+{
+  "synthetic_640x360": {
+    "platform": "windows",
+    "window_size": [
+      1280,
+      720
+    ],
+    "device_pixel_ratio": 1.25,
+    "source": "synthetic_640x360",
+    "frames_per_gesture": 120,
+    "before_source_sha256": {
+      "app.py": "e2f8330d458e152e01513f37942a0de24f9e093aab844808e28386bf97aebc84",
+      "free_canvas.py": "91ab8b1a250d54d1f5eaf2fa1cb1e45d61a66f784c4bb0c62cafade61c5a02b3",
+      "hover_controls.py": "651bd99cd1fc15822afbd9f2df283cd386184eb15a55769afda29d022fb74527",
+      "canvas.py": "dc753f63a2bbd96689db9038fb4cca025d771316e17b8845f94817f7bb1e15c8"
+    },
+    "after_source_sha256": {
+      "app.py": "d32e84946e1a2b93172e03b996e9a0f5bdfcbd3e8765dd230e6e4fc3eb28c9ed",
+      "free_canvas.py": "c3d71062248a998c97cb7685e5dd8a49d3cd604e11d0fdabd1c6f507227bf3c3",
+      "hover_controls.py": "b8374297e0f4f87957cc12e4a88dfef32eef58eaef39b3be8c9ac30980c92e79",
+      "canvas.py": "59ac1f8b354d2da58406db1a1be5ef17fa10a2172de22f62f555cb8535de1f6a"
+    },
+    "results": {
+      "move": {
+        "before_ms": 250.26050000451505,
+        "after_ms": 118.01590000686701,
+        "time_reduction_pct": 52.8,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "after_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "before_video_paint_area": 85586688,
+        "after_video_paint_area": 25780108,
+        "all_real_frames_advanced": null
+      },
+      "resize": {
+        "before_ms": 335.45229998708237,
+        "after_ms": 192.84430000698194,
+        "time_reduction_pct": 42.5,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "after_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "before_video_paint_area": 90416302,
+        "after_video_paint_area": 37264992,
+        "all_real_frames_advanced": null
+      }
+    }
+  },
+  "synthetic_3840x2160": {
+    "platform": "windows",
+    "window_size": [
+      1280,
+      720
+    ],
+    "device_pixel_ratio": 1.25,
+    "source": "synthetic_3840x2160",
+    "frames_per_gesture": 120,
+    "before_source_sha256": {
+      "app.py": "e2f8330d458e152e01513f37942a0de24f9e093aab844808e28386bf97aebc84",
+      "free_canvas.py": "91ab8b1a250d54d1f5eaf2fa1cb1e45d61a66f784c4bb0c62cafade61c5a02b3",
+      "hover_controls.py": "651bd99cd1fc15822afbd9f2df283cd386184eb15a55769afda29d022fb74527",
+      "canvas.py": "dc753f63a2bbd96689db9038fb4cca025d771316e17b8845f94817f7bb1e15c8"
+    },
+    "after_source_sha256": {
+      "app.py": "d32e84946e1a2b93172e03b996e9a0f5bdfcbd3e8765dd230e6e4fc3eb28c9ed",
+      "free_canvas.py": "c3d71062248a998c97cb7685e5dd8a49d3cd604e11d0fdabd1c6f507227bf3c3",
+      "hover_controls.py": "b8374297e0f4f87957cc12e4a88dfef32eef58eaef39b3be8c9ac30980c92e79",
+      "canvas.py": "59ac1f8b354d2da58406db1a1be5ef17fa10a2172de22f62f555cb8535de1f6a"
+    },
+    "results": {
+      "move": {
+        "before_ms": 324.33570000284817,
+        "after_ms": 141.49249999900348,
+        "time_reduction_pct": 56.4,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "after_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "before_video_paint_area": 85586688,
+        "after_video_paint_area": 25780108,
+        "all_real_frames_advanced": null
+      },
+      "resize": {
+        "before_ms": 413.18829999363516,
+        "after_ms": 196.244700011448,
+        "time_reduction_pct": 52.5,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "after_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "before_video_paint_area": 90416302,
+        "after_video_paint_area": 37264992,
+        "all_real_frames_advanced": null
+      }
+    }
+  },
+  "real_640x360": {
+    "platform": "windows",
+    "window_size": [
+      1280,
+      720
+    ],
+    "device_pixel_ratio": 1.25,
+    "source": "real_640x360",
+    "frames_per_gesture": 120,
+    "before_source_sha256": {
+      "app.py": "e2f8330d458e152e01513f37942a0de24f9e093aab844808e28386bf97aebc84",
+      "free_canvas.py": "91ab8b1a250d54d1f5eaf2fa1cb1e45d61a66f784c4bb0c62cafade61c5a02b3",
+      "hover_controls.py": "651bd99cd1fc15822afbd9f2df283cd386184eb15a55769afda29d022fb74527",
+      "canvas.py": "dc753f63a2bbd96689db9038fb4cca025d771316e17b8845f94817f7bb1e15c8"
+    },
+    "after_source_sha256": {
+      "app.py": "6b8e0dd9597474720599bef6a11fb9c2a7c2ecc1800ef5b9ba0a661cdbadd999",
+      "free_canvas.py": "c3d71062248a998c97cb7685e5dd8a49d3cd604e11d0fdabd1c6f507227bf3c3",
+      "hover_controls.py": "fd9a272ad8e6513b0705b64867a254b373c158271e172e5b0143c5f853346ab5",
+      "canvas.py": "59ac1f8b354d2da58406db1a1be5ef17fa10a2172de22f62f555cb8535de1f6a"
+    },
+    "results": {
+      "move": {
+        "before_ms": 354.64890000002924,
+        "after_ms": 142.15050000348128,
+        "time_reduction_pct": 59.9,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "after_geometry": [
+          562,
+          264,
+          512,
+          288
+        ],
+        "before_video_paint_area": 91371546,
+        "after_video_paint_area": 28792811,
+        "all_real_frames_advanced": true
+      },
+      "resize": {
+        "before_ms": 556.3069000054384,
+        "after_ms": 224.4079999945825,
+        "time_reduction_pct": 59.7,
+        "final_geometry_equal": true,
+        "before_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "after_geometry": [
+          448,
+          202,
+          626,
+          375
+        ],
+        "before_video_paint_area": 113991318,
+        "after_video_paint_area": 41176378,
+        "all_real_frames_advanced": true
+      }
+    }
+  },
+  "measurement_limits": "One controlled run per case with identical cProfile/event instrumentation. CPU event dispatch and Qt paint throughput, not VSync latency, user FPS, or decoder capacity. Synthetic 4K input has no decoder. Real video is four independent 640x360 H.264/AAC players. Normal update requests flushed after each mouse move; no per-frame grabs.",
+  "comparison_labels": {
+    "before": "early implementation",
+    "after": "internal baseline"
+  },
+  "note": "Existing measurements from an earlier internal optimization round before the 1.0.0 release. These are the original measurements of the implementations identified by the source hashes, not a new release benchmark. Only explanatory labels have been added; all measurements and original source hashes are unchanged. Do not combine these speedups with the later internal baseline to pre-release candidate comparison in performance.json."
+}
