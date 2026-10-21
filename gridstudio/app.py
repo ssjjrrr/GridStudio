@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from . import i18n
+from .i18n import tr
+
 import argparse
 import json
 import os
 import sys
 from pathlib import Path
+from time import monotonic
 
-from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QDrag, QFont, QIcon, QKeySequence, QPainter, QPalette, QPen, QPixmap, QPolygon, QRegion, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -30,11 +34,11 @@ PANE_MIME = "application/x-gridstudio-pane"
 FIT_MODES = [("保持原比例（完整显示）", "contain"), ("等比铺满（裁切边缘）", "cover"), ("拉伸填满（不裁切）", "stretch")]
 
 STYLE = """
-QWidget { background: #11161d; color: #dbe3ee; font-family: 'Microsoft YaHei UI', 'Segoe UI'; font-size: 12px; }
+QWidget { background: #11161d; color: #dbe3ee; font-size: 12px; }
 QLabel, QCheckBox { background: transparent; }
 QMainWindow { background: #11161d; }
 QFrame#top { background: #181f29; border-bottom: 1px solid #2c3644; }
-QLabel#brand { font-family: 'Segoe UI'; font-size: 23px; font-weight: 700; color: #f4f7fb; }
+QLabel#brand { font-size: 23px; font-weight: 700; color: #f4f7fb; }
 QLabel#sub { color: #8795a9; font-size: 11px; }
 QLabel#section { color: #7e91a8; font-size: 11px; font-weight: 600; }
 QPushButton, QToolButton { background: #242e3c; border: 1px solid #354153; border-radius: 6px; padding: 6px 11px; }
@@ -134,7 +138,7 @@ class PaneHeader(QWidget):
         self.origin = None
         self.setObjectName("paneHeader")
         self.setCursor(Qt.CursorShape.OpenHandCursor)
-        self.setToolTip("拖动标题栏到另一个窗格可交换位置")
+        self.setToolTip(tr('拖动标题栏到另一个窗格可交换位置'))
         row = QHBoxLayout(self)
         row.setContentsMargins(8, 5, 6, 5)
         row.setSpacing(5)
@@ -142,7 +146,8 @@ class PaneHeader(QWidget):
         grip.setStyleSheet("color: #718198; font-size: 18px;")
         grip.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         row.addWidget(grip)
-        self.title = QLabel("空白窗格")
+        self.title = QLabel(tr('空白窗格'))
+        self.title.setProperty("i18nUserText", True)
         self.title.setObjectName("paneTitle")
         self.title.setMinimumWidth(30)
         self.title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -153,17 +158,17 @@ class PaneHeader(QWidget):
         row.addWidget(self.badge)
         self.copy_button = QToolButton()
         self.copy_button.setText("⧉")
-        self.copy_button.setToolTip("复制窗格，保留进度 / 裁剪 / 旋转（Ctrl+D）")
+        self.copy_button.setToolTip(tr('复制窗格，保留进度 / 裁剪 / 旋转（Ctrl+D）'))
         self.copy_button.clicked.connect(lambda: pane.owner.duplicate(pane.state.id))
         row.addWidget(self.copy_button)
         more = QToolButton()
         more.setText("···")
-        more.setToolTip("窗格操作")
+        more.setToolTip(tr('窗格操作'))
         more.clicked.connect(lambda: pane.context_menu(more.mapToGlobal(QPoint(0, more.height()))))
         row.addWidget(more)
         close = QToolButton()
         close.setText("×")
-        close.setToolTip("关闭窗格")
+        close.setToolTip(tr('关闭窗格'))
         close.clicked.connect(lambda: pane.owner.remove_pane(pane.state.id))
         row.addWidget(close)
 
@@ -217,9 +222,11 @@ class VideoPane(QFrame):
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.player.setVideoOutput(self.canvas.video_item)
-        self.player.positionChanged.connect(self.on_position)
-        self.player.durationChanged.connect(self.on_duration)
-        self.player.playbackStateChanged.connect(self.on_playback)
+        # Native seek/control calls can emit these synchronously. Update Qt
+        # widgets after the native command returns, outside its decoder stack.
+        self.player.positionChanged.connect(self.on_position, Qt.ConnectionType.QueuedConnection)
+        self.player.durationChanged.connect(self.on_duration, Qt.ConnectionType.QueuedConnection)
+        self.player.playbackStateChanged.connect(self.on_playback, Qt.ConnectionType.QueuedConnection)
         self.player.mediaStatusChanged.connect(self.on_status)
         self.player.errorOccurred.connect(self.on_error)
         self.canvas.activated.connect(lambda: owner.select(state.id))
@@ -235,18 +242,18 @@ class VideoPane(QFrame):
         controls_col.setSpacing(5)
         self.timeline = QSlider(Qt.Orientation.Horizontal)
         self.timeline.setRange(0, 0)
-        self.timeline.setToolTip("拖动定位")
+        self.timeline.setToolTip(tr('拖动定位'))
         self.timeline.sliderReleased.connect(lambda: owner.playback.seek(self.state.id, self.timeline.value()))
         controls_col.addWidget(self.timeline)
         row = QHBoxLayout()
         row.setSpacing(6)
         self.play_button = QToolButton()
         self.play_button.setIcon(media_icon("play"))
-        self.play_button.setToolTip("播放 / 暂停（空格）")
+        self.play_button.setToolTip(tr('播放 / 暂停（空格）'))
         self.play_button.clicked.connect(self.toggle_play)
         row.addWidget(self.play_button)
         self.time_label = QLabel("00:00 / 00:00")
-        self.time_label.setStyleSheet("font-family: 'Segoe UI'; color: #a0afc2; font-size: 11px;")
+        self.time_label.setStyleSheet("color: #a0afc2; font-size: 11px;")
         row.addWidget(self.time_label)
         row.addStretch()
         self.mute_button = QToolButton()
@@ -348,8 +355,8 @@ class VideoPane(QFrame):
 
     def on_error(self, _error, message):
         if self.player.error() != QMediaPlayer.Error.NoError:
-            self.canvas.set_message("无法播放此视频\n" + message + "\n可尝试其他编码的视频文件")
-            self.owner.notify("视频打开失败：" + message)
+            self.canvas.set_message(tr('无法播放此视频\n{message}\n可尝试其他编码的视频文件', message=message))
+            self.owner.notify(tr('视频打开失败：{message}', message=message))
 
     def apply_state(self):
         self.canvas.set_transform(self.state.crop, self.state.rotation, self.state.flip_h, self.state.flip_v)
@@ -363,26 +370,26 @@ class VideoPane(QFrame):
         if self.player.loops() != loops:
             self.player.setLoops(loops)
         self.mute_button.setIcon(media_icon("muted" if self.state.muted else "volume"))
-        self.mute_button.setToolTip("取消静音" if self.state.muted else "静音")
+        self.mute_button.setToolTip(tr('取消静音') if self.state.muted else tr('静音'))
         self.speed_label.setText(f"{self.state.rate:g}×")
         self.refresh_header()
 
     def refresh_header(self, *, refresh_hover=True):
-        name = Path(self.state.source).name if self.state.source else "空白窗格"
+        name = Path(self.state.source).name if self.state.source else tr('空白窗格')
         metrics = self.header.title.fontMetrics()
         self.header.title.setText(metrics.elidedText(name, Qt.TextElideMode.ElideMiddle, max(40, self.header.title.width())))
-        self.header.title.setToolTip(self.state.source or "双击画面聚焦；右键打开视频")
+        self.header.title.setToolTip(self.state.source or tr('双击画面聚焦；右键打开视频'))
         badges = []
         if tuple(self.state.crop) != (0, 0, 1, 1):
-            badges.append("裁剪")
+            badges.append(tr('裁剪'))
         if self.state.rotation:
             badges.append(f"{self.state.rotation}°")
         if self.state.flip_h or self.state.flip_v:
-            badges.append("镜像")
+            badges.append(tr('镜像'))
         if self.state.loop and self.state.loop_end_ms is not None:
             badges.append("A/B")
         if self.state.sync_group:
-            badges.append("同步 " + self.state.sync_group)
+            badges.append(tr('同步 ') + self.state.sync_group)
         self.header.badge.setText(" · ".join(badges))
         self.header.badge.setVisible(bool(badges))
         if refresh_hover and (controls := getattr(self, "hover_controls", None)):
@@ -394,7 +401,10 @@ class VideoPane(QFrame):
             self.refresh_header(refresh_hover=False)
         # HoverControls already follows pane/viewport resize and video geometry.
 
+    @Slot("qint64")
     def on_position(self, pos):
+        if self._disposed:
+            return
         if not self.timeline.isSliderDown():
             self.timeline.setValue(pos)
         text = f"{time_text(pos)} / {time_text(self._duration_ms)}"
@@ -402,12 +412,18 @@ class VideoPane(QFrame):
             self._time_text = text
             self.time_label.setText(text)
 
+    @Slot("qint64")
     def on_duration(self, duration):
+        if self._disposed:
+            return
         self._duration_ms = duration
         self.timeline.setRange(0, duration)
         self.on_position(self.player.position())
 
+    @Slot(QMediaPlayer.PlaybackState)
     def on_playback(self, state):
+        if self._disposed:
+            return
         playing = state == QMediaPlayer.PlaybackState.PlayingState
         self.play_button.setIcon(media_icon("pause" if playing else "play"))
 
@@ -429,7 +445,7 @@ class VideoPane(QFrame):
         self.state.crop = tuple(crop)
         self.apply_state()
         self.owner.refresh_inspector()
-        self.owner.notify("已裁剪。复制窗格会保留当前裁剪区域。")
+        self.owner.notify(tr('已裁剪。复制窗格会保留当前裁剪区域。'))
 
     def context_menu(self, point):
         self.owner.select(self.state.id)
@@ -469,7 +485,8 @@ class VideoPane(QFrame):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("GridStudio · 多画面播放器")
+        i18n.initialize()
+        self.setWindowTitle(tr('GridStudio · 多画面播放器'))
         self.setWindowIcon(app_icon())
         self.resize(1460, 920)
         self.setMinimumSize(1020, 640)
@@ -512,15 +529,15 @@ class MainWindow(QMainWindow):
         brand = QLabel("GridStudio")
         brand.setObjectName("brand")
         brand_col.addWidget(brand)
-        sub = QLabel("每个画面，都有自己的位置")
+        sub = QLabel(tr('每个画面，都有自己的位置'))
         sub.setObjectName("sub")
         brand_col.addWidget(sub)
         top_row.addLayout(brand_col)
         top_row.addStretch()
-        top_row.addWidget(button("＋ 添加视频", self.open_files, "打开本地视频，可多选（Ctrl+O）", True))
-        top_row.addWidget(button("打开工作区", self.load_dialog, "恢复保存的布局和视频状态（Ctrl+Shift+O）"))
-        top_row.addWidget(button("保存工作区", self.save_dialog, "保存布局、进度和画面变换（Ctrl+S）"))
-        help_button = button("？", self.show_help, "使用说明和快捷键")
+        top_row.addWidget(button(tr('＋ 添加视频'), self.open_files, tr('打开本地视频，可多选（Ctrl+O）'), True))
+        top_row.addWidget(button(tr('打开工作区'), self.load_dialog, tr('恢复保存的布局和视频状态（Ctrl+Shift+O）')))
+        top_row.addWidget(button(tr('保存工作区'), self.save_dialog, tr('保存布局、进度和画面变换（Ctrl+S）')))
+        help_button = button("？", self.show_help, tr('使用说明和快捷键'))
         help_button.setFixedWidth(35)
         top_row.addWidget(help_button)
         outer.addWidget(top)
@@ -529,21 +546,21 @@ class MainWindow(QMainWindow):
         tools_row = QHBoxLayout(tools)
         tools_row.setContentsMargins(18, 10, 18, 10)
         tools_row.setSpacing(8)
-        tools_row.addWidget(QLabel("布局"))
+        tools_row.addWidget(QLabel(tr('布局')))
         self.layout_combo = QComboBox()
         self.layout_combo.setMinimumWidth(135)
-        for label, key in [("自由画布", "canvas"), ("自定义网格", "custom"), ("等宽竖列", "columns"), ("等高横行", "rows"), ("两列网格", "grid4"), ("三列网格", "grid9"), ("主画面在左", "focus-left"), ("主画面在上", "focus-top")]:
+        for label, key in [(tr('自由画布'), "canvas"), (tr('自定义网格'), "custom"), (tr('等宽竖列'), "columns"), (tr('等高横行'), "rows"), (tr('两列网格'), "grid4"), (tr('三列网格'), "grid9"), (tr('主画面在左'), "focus-left"), (tr('主画面在上'), "focus-top")]:
             self.layout_combo.addItem(label, key)
         self.layout_combo.activated.connect(self.preset_selected)
         tools_row.addWidget(self.layout_combo)
-        tools_row.addWidget(button("左右拆分", lambda: self.add_blank(axis="horizontal"), "在选中窗格右侧添加空白窗格"))
-        tools_row.addWidget(button("上下拆分", lambda: self.add_blank(axis="vertical"), "在选中窗格下方添加空白窗格"))
-        tools_row.addWidget(button("⧉ 复制窗格", lambda: self.duplicate(), "复制当前视频和全部变换（Ctrl+D）"))
-        tools_row.addWidget(button("位置 / 大小", self.layer_rect_dialog, "精确设置当前画面的坐标和尺寸"))
+        tools_row.addWidget(button(tr('左右拆分'), lambda: self.add_blank(axis="horizontal"), tr('在选中窗格右侧添加空白窗格')))
+        tools_row.addWidget(button(tr('上下拆分'), lambda: self.add_blank(axis="vertical"), tr('在选中窗格下方添加空白窗格')))
+        tools_row.addWidget(button(tr('⧉ 复制窗格'), lambda: self.duplicate(), tr('复制当前视频和全部变换（Ctrl+D）')))
+        tools_row.addWidget(button(tr('位置 / 大小'), self.layer_rect_dialog, tr('精确设置当前画面的坐标和尺寸')))
         tools_row.addStretch()
-        tools_row.addWidget(button("全部播放", lambda: self.play_all(True)))
-        tools_row.addWidget(button("全部暂停", lambda: self.play_all(False)))
-        self.focus_button = button("聚焦", lambda: self.toggle_focus(), "聚焦选中窗格 / 返回布局（F）")
+        tools_row.addWidget(button(tr('全部播放'), lambda: self.play_all(True)))
+        tools_row.addWidget(button(tr('全部暂停'), lambda: self.play_all(False)))
+        self.focus_button = button(tr('聚焦'), lambda: self.toggle_focus(), tr('聚焦选中窗格 / 返回布局（F）'))
         tools_row.addWidget(self.focus_button)
         outer.addWidget(tools)
         body = QHBoxLayout()
@@ -559,7 +576,7 @@ class MainWindow(QMainWindow):
         outer.addLayout(body, 1)
         self.count_label = QLabel()
         self.statusBar().addPermanentWidget(self.count_label)
-        self.notify("拖入视频开始 · 拖动分隔线调整大小 · 拖动标题栏交换位置", 0)
+        self.notify(tr('拖入视频开始 · 拖动分隔线调整大小 · 拖动标题栏交换位置'), 0)
         self.install_shortcuts()
         states = [PaneState()]
         for state in states:
@@ -569,6 +586,26 @@ class MainWindow(QMainWindow):
         self.rebuild()
         self.layout_combo.setCurrentIndex(0)
         self.set_clean_mode(True)
+        i18n.events.changed.connect(self.retranslate_ui)
+
+    def retranslate_ui(self):
+        """Update only presentation; preserve decoder, transform and playback state."""
+        i18n.retranslate_widgets(self)
+        self._inspector_state = None
+        self.refresh_inspector()
+        self.count_label.setText(tr('{value0} 个画面  ·  GridStudio {value2}', value0=f'{len(self.panes)}', value2=f'{__version__}'))
+        previous_message = self.statusBar().currentMessage()
+        message = i18n.translated_existing(previous_message)
+        if message != previous_message:
+            remaining = (max(1, round((self._notification_deadline - monotonic()) * 1000))
+                         if self._notification_deadline is not None else 0)
+            self.statusBar().showMessage(message, remaining)
+        for pane in self.panes.values():
+            pane.refresh_header()
+            pane.mute_button.setToolTip(tr('取消静音') if pane.state.muted else tr('静音'))
+            pane.hover_controls._transport_state = None
+            pane.hover_controls._refresh_transport()
+            pane.canvas.retranslate_ui()
 
     def set_clean_mode(self, clean):
         """Keep playback controls out of the picture until explicitly requested."""
@@ -677,13 +714,13 @@ class MainWindow(QMainWindow):
         width, height = max(1, stage.width()), max(1, stage.height())
         x, y, w, h = self.active().state.canvas_rect
         dialog = QDialog(self)
-        dialog.setWindowTitle("画面位置与大小")
+        dialog.setWindowTitle(tr('画面位置与大小'))
         layout = QVBoxLayout(dialog)
         form = QFormLayout()
         fields = []
         for label, value, minimum, maximum in [
             ("X", x * width, -width, 2 * width), ("Y", y * height, -height, 2 * height),
-            ("宽度", w * width, 40, 3 * width), ("高度", h * height, 30, 3 * height),
+            (tr('宽度'), w * width, 40, 3 * width), (tr('高度'), h * height, 30, 3 * height),
         ]:
             field = QDoubleSpinBox()
             field.setDecimals(1)
@@ -713,103 +750,113 @@ class MainWindow(QMainWindow):
             child = parent.addMenu(title)
             menu._submenus.append(child)
             return child
-        menu.addAction("添加视频…\tCtrl+O", self.open_files)
-        menu.addAction("替换当前视频…", lambda: self.open_files(self.active_id))
-        menu.addAction("播放 / 暂停\tSpace", pane.toggle_play)
-        menu.addAction("复制窗格\tCtrl+D", self.duplicate)
-        menu.addAction("关闭窗格\tCtrl+W", lambda: self.remove_pane(self.active_id))
+        menu.addAction(tr('添加视频…\tCtrl+O'), self.open_files)
+        menu.addAction(tr('替换当前视频…'), lambda: self.open_files(self.active_id))
+        menu.addAction(tr('播放 / 暂停\tSpace'), pane.toggle_play)
+        menu.addAction(tr('复制窗格\tCtrl+D'), self.duplicate)
+        menu.addAction(tr('关闭窗格\tCtrl+W'), lambda: self.remove_pane(self.active_id))
         menu.addSeparator()
-        playback = submenu(menu, "播放")
-        playback.addAction("全部播放", lambda: self.play_all(True))
-        playback.addAction("全部暂停", lambda: self.play_all(False))
-        mute = playback.addAction("静音\tM")
+        playback = submenu(menu, tr('播放'))
+        playback.addAction(tr('全部播放'), lambda: self.play_all(True))
+        playback.addAction(tr('全部暂停'), lambda: self.play_all(False))
+        mute = playback.addAction(tr('静音\tM'))
         mute.setCheckable(True)
         mute.setChecked(pane.state.muted)
         mute.triggered.connect(pane.toggle_mute)
-        speed = submenu(playback, "速度")
+        speed = submenu(playback, tr('速度'))
         for value in [.25, .5, .75, 1., 1.25, 1.5, 2., 3., 4.]:
             action = speed.addAction(f"{value:g}×")
             action.setCheckable(True)
             action.setChecked(pane.state.rate == value)
             action.triggered.connect(lambda checked=False, rate=value: self.set_playback_rate(rate))
-        picture = submenu(menu, "画面")
-        fit = submenu(picture, "显示方式")
+        picture = submenu(menu, tr('画面'))
+        fit = submenu(picture, tr('显示方式'))
         for label, mode in FIT_MODES:
-            action = fit.addAction(label)
+            action = fit.addAction(tr(label))
             action.setCheckable(True)
             action.setChecked(pane.state.fit_mode == mode)
             action.triggered.connect(lambda checked=False, mode=mode: self.set_fit_mode(mode))
         fit.addSeparator()
-        fit.addAction("将当前方式应用到全部窗格", lambda: self.set_fit_mode(self.active().state.fit_mode, all_panes=True))
+        fit.addAction(tr('将当前方式应用到全部窗格'), lambda: self.set_fit_mode(self.active().state.fit_mode, all_panes=True))
         picture.addSeparator()
-        picture.addAction("框选裁剪\tC", self.start_crop)
-        picture.addAction("顺时针旋转 90°\tR", lambda: self.rotate())
-        picture.addAction("逆时针旋转 90°", lambda: self.rotate(-90))
-        for label, field in [("水平镜像", "flip_h"), ("垂直镜像", "flip_v")]:
+        picture.addAction(tr('框选裁剪\tC'), self.start_crop)
+        picture.addAction(tr('顺时针旋转 90°\tR'), lambda: self.rotate())
+        picture.addAction(tr('逆时针旋转 90°'), lambda: self.rotate(-90))
+        for label, field in [(tr('水平镜像'), "flip_h"), (tr('垂直镜像'), "flip_v")]:
             action = picture.addAction(label)
             action.setCheckable(True)
             action.setChecked(getattr(pane.state, field))
             action.triggered.connect(lambda checked=False, field=field: self.toggle_mirror(field))
-        picture.addAction("重置画面", self.reset_transform)
-        layers = submenu(menu, "图层")
-        layers.addAction("置于顶层\tCtrl+Shift+]", lambda: self.move_layer("front"))
-        layers.addAction("上移一层\tCtrl+]", lambda: self.move_layer("forward"))
-        layers.addAction("下移一层\tCtrl+[", lambda: self.move_layer("backward"))
-        layers.addAction("置于底层\tCtrl+Shift+[", lambda: self.move_layer("back"))
+        picture.addAction(tr('重置画面'), self.reset_transform)
+        layers = submenu(menu, tr('图层'))
+        layers.addAction(tr('置于顶层\tCtrl+Shift+]'), lambda: self.move_layer("front"))
+        layers.addAction(tr('上移一层\tCtrl+]'), lambda: self.move_layer("forward"))
+        layers.addAction(tr('下移一层\tCtrl+['), lambda: self.move_layer("backward"))
+        layers.addAction(tr('置于底层\tCtrl+Shift+['), lambda: self.move_layer("back"))
         layers.addSeparator()
-        layers.addAction("位置与大小…", self.layer_rect_dialog)
-        layers.addAction("铺满整个画布", self.fill_canvas)
-        selection = submenu(layers, "选中图层")
+        layers.addAction(tr('位置与大小…'), self.layer_rect_dialog)
+        layers.addAction(tr('铺满整个画布'), self.fill_canvas)
+        selection = submenu(layers, tr('选中图层'))
         for index, layer in enumerate(sorted(self.panes.values(), key=lambda p: p.state.z_order, reverse=True)):
-            label = f"{index + 1}. " + (Path(layer.state.source).name if layer.state.source else "空白画面")
+            label = f"{index + 1}. " + (Path(layer.state.source).name if layer.state.source else tr('空白画面'))
             action = selection.addAction(label)
             action.setCheckable(True)
             action.setChecked(layer.state.id == self.active_id)
             action.triggered.connect(lambda checked=False, pid=layer.state.id: self.select(pid))
-        loops = submenu(menu, "循环")
-        loop_switch = loops.addAction("启用循环\tL")
+        loops = submenu(menu, tr('循环'))
+        loop_switch = loops.addAction(tr('启用循环\tL'))
         loop_switch.setCheckable(True)
         loop_switch.setChecked(pane.state.loop)
         loop_switch.triggered.connect(lambda checked=False: self.toggle_loop())
-        loops.addAction("整个视频循环", lambda: self.playback.set_loop(self.active_id, True, start_ms=0, end_ms=None))
-        loops.addAction(f"设 A 点：当前进度\t[", self.set_loop_a)
-        loops.addAction(f"设 B 点并循环\t]", self.set_loop_b)
-        loops.addAction("设置 A/B 循环区间…", self.loop_dialog)
-        loops.addAction("清除 A/B 标记", lambda: self.playback.clear_loop(self.active_id))
-        info = loops.addAction(f"A {pane.state.loop_start_ms / 1000:.3f}s  /  B " + (f"{pane.state.loop_end_ms / 1000:.3f}s" if pane.state.loop_end_ms is not None else "未设置"))
+        loops.addAction(tr('整个视频循环'), lambda: self.playback.set_loop(self.active_id, True, start_ms=0, end_ms=None))
+        loops.addAction(tr('设 A 点：当前进度\t['), self.set_loop_a)
+        loops.addAction(tr('设 B 点并循环\t]'), self.set_loop_b)
+        loops.addAction(tr('设置 A/B 循环区间…'), self.loop_dialog)
+        loops.addAction(tr('清除 A/B 标记'), lambda: self.playback.clear_loop(self.active_id))
+        info = loops.addAction(f"A {pane.state.loop_start_ms / 1000:.3f}s  /  B " + (f"{pane.state.loop_end_ms / 1000:.3f}s" if pane.state.loop_end_ms is not None else tr('未设置')))
         info.setEnabled(False)
-        sync = submenu(menu, "同步")
-        sync.addAction("同步全部视频（按时间）\tCtrl+G", self.sync_all)
-        sync.addAction("同步全部视频（按百分比）", lambda: self.sync_all(mode="percent"))
-        sync.addAction("同步全部视频（保留时间差）", lambda: self.sync_all(preserve_offsets=True))
+        sync = submenu(menu, tr('同步'))
+        sync.addAction(tr('同步全部视频（按时间）\tCtrl+G'), self.sync_all)
+        sync.addAction(tr('同步全部视频（按百分比）'), lambda: self.sync_all(mode="percent"))
+        sync.addAction(tr('同步全部视频（保留时间差）'), lambda: self.sync_all(preserve_offsets=True))
         sync.addSeparator()
         for group in ("1", "2", "3", "4"):
-            action = sync.addAction("加入同步组 " + group)
+            action = sync.addAction(tr('加入同步组 ') + group)
             action.setCheckable(True)
             action.setChecked(pane.state.sync_group == group)
             action.triggered.connect(lambda checked=False, group=group: self.join_sync_group(group))
-        sync.addAction("退出当前同步组", lambda: self.playback.leave_group([self.active_id]))
-        sync.addAction("取消全部同步", lambda: self.playback.leave_group(list(self.panes)))
-        layout = submenu(menu, "布局")
+        sync.addAction(tr('退出当前同步组'), lambda: self.playback.leave_group([self.active_id]))
+        sync.addAction(tr('取消全部同步'), lambda: self.playback.leave_group(list(self.panes)))
+        layout = submenu(menu, tr('布局'))
         for index in range(self.layout_combo.count()):
             action = layout.addAction(self.layout_combo.itemText(index))
             action.triggered.connect(lambda checked=False, index=index: self.apply_preset(index))
         layout.addSeparator()
-        layout.addAction("向右拆分", lambda: self.add_blank(axis="horizontal"))
-        layout.addAction("向下拆分", lambda: self.add_blank(axis="vertical"))
-        layout.addAction("复制到下方", lambda: self.duplicate(axis="vertical"))
-        layout.addAction("聚焦 / 返回布局\tF", self.toggle_focus)
-        workspace = submenu(menu, "工作区")
-        workspace.addAction("打开…\tCtrl+Shift+O", self.load_dialog)
-        workspace.addAction("保存…\tCtrl+S", self.save_dialog)
+        layout.addAction(tr('向右拆分'), lambda: self.add_blank(axis="horizontal"))
+        layout.addAction(tr('向下拆分'), lambda: self.add_blank(axis="vertical"))
+        layout.addAction(tr('复制到下方'), lambda: self.duplicate(axis="vertical"))
+        layout.addAction(tr('聚焦 / 返回布局\tF'), self.toggle_focus)
+        workspace = submenu(menu, tr('工作区'))
+        workspace.addAction(tr('打开…\tCtrl+Shift+O'), self.load_dialog)
+        workspace.addAction(tr('保存…\tCtrl+S'), self.save_dialog)
         menu.addSeparator()
-        edit = menu.addAction("显示编辑界面\tTab")
+        edit = menu.addAction(tr('显示编辑界面\tTab'))
         edit.setCheckable(True)
         edit.setChecked(not self.clean_mode)
         edit.triggered.connect(self.toggle_clean_mode)
-        menu.addAction("全屏 / 退出全屏\tF11", self.toggle_fullscreen)
-        menu.addAction("使用说明", self.show_help)
-        menu.addAction("退出\tCtrl+Q", self.close)
+        menu.addAction(tr('全屏 / 退出全屏\tF11'), self.toggle_fullscreen)
+        menu.addAction(tr('使用说明'), self.show_help)
+        languages = submenu(menu, "Language / 语言")
+        for label, locale in [("English", "en"), ("简体中文", "zh_CN")]:
+            action = languages.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(i18n.language() == locale and not i18n.follows_system())
+            action.triggered.connect(lambda _checked=False, value=locale: i18n.set_language(value, persist=True))
+        system = languages.addAction("System default / 跟随系统")
+        system.setCheckable(True)
+        system.setChecked(i18n.follows_system())
+        system.triggered.connect(lambda _checked=False: i18n.use_system_language())
+        menu.addAction(tr('退出\tCtrl+Q'), self.close)
         return menu
 
     def set_playback_rate(self, rate):
@@ -841,7 +888,7 @@ class MainWindow(QMainWindow):
     def set_loop_b(self):
         if self.active():
             if not self.playback.set_b(self.active_id):
-                QMessageBox.information(self, "A/B 循环", "请先设置 A 点，再将进度移动到 A 点之后设置 B 点。")
+                QMessageBox.information(self, tr('A/B 循环'), tr('请先设置 A 点，再将进度移动到 A 点之后设置 B 点。'))
             self.refresh_inspector()
 
     def loop_dialog(self):
@@ -849,7 +896,7 @@ class MainWindow(QMainWindow):
         if not pane or not pane.state.source:
             return
         dialog = QDialog(self)
-        dialog.setWindowTitle("A/B 区间循环")
+        dialog.setWindowTitle(tr('A/B 区间循环'))
         layout = QVBoxLayout(dialog)
         form = QFormLayout()
         start, end = QDoubleSpinBox(), QDoubleSpinBox()
@@ -857,14 +904,14 @@ class MainWindow(QMainWindow):
         for field in (start, end):
             field.setDecimals(3)
             field.setRange(0, maximum)
-            field.setSuffix(" 秒")
+            field.setSuffix(tr(' 秒'))
             field.setSingleStep(.1)
         start.setValue(pane.state.loop_start_ms / 1000)
         end.setValue((pane.state.loop_end_ms or pane.player.duration()) / 1000)
-        form.addRow("开始 A", start)
-        form.addRow("结束 B", end)
+        form.addRow(tr('开始 A'), start)
+        form.addRow(tr('结束 B'), end)
         layout.addLayout(form)
-        note = QLabel("到达 B 点后返回 A 点。同步组内同时设置并循环。")
+        note = QLabel(tr('到达 B 点后返回 A 点。同步组内同时设置并循环。'))
         layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(dialog.accept)
@@ -872,7 +919,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(buttons)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             if not self.playback.set_loop(pane.state.id, True, start_ms=round(start.value() * 1000), end_ms=round(end.value() * 1000)):
-                QMessageBox.warning(self, "无法设置循环", "结束 B 必须大于开始 A，并且在视频时长之内。")
+                QMessageBox.warning(self, tr('无法设置循环'), tr('结束 B 必须大于开始 A，并且在视频时长之内。'))
             self.refresh_inspector()
 
     def sync_all(self, preserve_offsets=False, mode="time"):
@@ -880,7 +927,7 @@ class MainWindow(QMainWindow):
         if ids:
             leader = self.active_id if self.active_id in ids else ids[0]
             if self.playback.join_group(ids, group="1", leader_id=leader, preserve_offsets=preserve_offsets, mode=mode) is False:
-                QMessageBox.information(self, "无法同步", "视频时长差异过大，百分比同步需要的播放速度超出支持范围。请使用按时间同步。")
+                QMessageBox.information(self, tr('无法同步'), tr('视频时长差异过大，百分比同步需要的播放速度超出支持范围。请使用按时间同步。'))
             self.refresh_inspector()
 
     def join_sync_group(self, group):
@@ -889,7 +936,7 @@ class MainWindow(QMainWindow):
         existing = [pid for pid, pane in self.panes.items() if pane.state.sync_group == group and pid != self.active_id]
         mode = self.panes[existing[0]].state.sync_mode if existing else "time"
         if self.playback.join_group([self.active_id], group=group, leader_id=existing[0] if existing else self.active_id, mode=mode) is False:
-            QMessageBox.information(self, "无法同步", "视频时长差异过大。请使用按时间同步。")
+            QMessageBox.information(self, tr('无法同步'), tr('视频时长差异过大。请使用按时间同步。'))
         self.refresh_inspector()
 
     def toggle_mirror(self, field):
@@ -905,14 +952,16 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(15, 16, 15, 14)
         layout.setSpacing(12)
-        section = QLabel("当前窗格")
+        section = QLabel(tr('当前窗格'))
         section.setObjectName("section")
         layout.addWidget(section)
-        self.selected_label = QLabel("空白窗格")
+        self.selected_label = QLabel(tr('空白窗格'))
+        self.selected_label.setProperty("i18nUserText", True)
         self.selected_label.setWordWrap(True)
         self.selected_label.setStyleSheet("font-size: 14px; font-weight: 600;")
         layout.addWidget(self.selected_label)
-        self.source_label = QLabel("可拖入视频，或点击添加视频")
+        self.source_label = QLabel(tr('可拖入视频，或点击添加视频'))
+        self.source_label.setProperty("i18nUserText", True)
         self.source_label.setWordWrap(True)
         self.source_label.setObjectName("sub")
         self.source_label.setMaximumHeight(54)
@@ -921,34 +970,34 @@ class MainWindow(QMainWindow):
         line.setFrameShape(QFrame.Shape.HLine)
         line.setStyleSheet("background: #344050; max-height: 1px;")
         layout.addWidget(line)
-        layout.addWidget(QLabel("画面变换"))
+        layout.addWidget(QLabel(tr('画面变换')))
         self.fit_mode = QComboBox()
         for label, value in FIT_MODES:
-            self.fit_mode.addItem(label, value)
+            self.fit_mode.addItem(tr(label), value)
         self.fit_mode.currentIndexChanged.connect(self.inspector_changed)
         layout.addWidget(self.fit_mode)
         row = QHBoxLayout()
         row.addWidget(button("↶ 90°", lambda: self.rotate(-90)))
         row.addWidget(button("↷ 90°", lambda: self.rotate(90)))
         layout.addLayout(row)
-        self.rotation_label = QLabel("当前旋转 0°")
+        self.rotation_label = QLabel(tr('当前旋转 0°'))
         self.rotation_label.setObjectName("sub")
         layout.addWidget(self.rotation_label)
         mirrors = QHBoxLayout()
-        self.flip_h = QCheckBox("水平镜像")
-        self.flip_v = QCheckBox("垂直镜像")
+        self.flip_h = QCheckBox(tr('水平镜像'))
+        self.flip_v = QCheckBox(tr('垂直镜像'))
         self.flip_h.toggled.connect(self.inspector_changed)
         self.flip_v.toggled.connect(self.inspector_changed)
         mirrors.addWidget(self.flip_h)
         mirrors.addWidget(self.flip_v)
         layout.addLayout(mirrors)
-        self.crop_button = button("框选裁剪", self.start_crop, "在原始画面上拖出需要保留的区域（C）")
+        self.crop_button = button(tr('框选裁剪'), self.start_crop, tr('在原始画面上拖出需要保留的区域（C）'))
         layout.addWidget(self.crop_button)
-        self.crop_label = QLabel("显示完整画面")
+        self.crop_label = QLabel(tr('显示完整画面'))
         self.crop_label.setObjectName("sub")
         self.crop_label.setWordWrap(True)
         layout.addWidget(self.crop_label)
-        layout.addWidget(button("重置画面", self.reset_transform))
+        layout.addWidget(button(tr('重置画面'), self.reset_transform))
         form = QFormLayout()
         form.setContentsMargins(0, 4, 0, 0)
         form.setSpacing(10)
@@ -956,23 +1005,23 @@ class MainWindow(QMainWindow):
         for rate in [.25, .5, .75, 1., 1.25, 1.5, 2., 3., 4.]:
             self.rate.addItem(f"{rate:g}×", rate)
         self.rate.currentIndexChanged.connect(self.inspector_changed)
-        form.addRow("播放速度", self.rate)
+        form.addRow(tr('播放速度'), self.rate)
         self.volume = QSlider(Qt.Orientation.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.valueChanged.connect(self.inspector_changed)
-        form.addRow("音量", self.volume)
+        form.addRow(tr('音量'), self.volume)
         layout.addLayout(form)
         row2 = QHBoxLayout()
-        self.muted = QCheckBox("静音")
-        self.loop = QCheckBox("循环播放")
+        self.muted = QCheckBox(tr('静音'))
+        self.loop = QCheckBox(tr('循环播放'))
         self.muted.toggled.connect(self.inspector_changed)
         self.loop.toggled.connect(self.inspector_changed)
         row2.addWidget(self.muted)
         row2.addWidget(self.loop)
         layout.addLayout(row2)
-        layout.addWidget(button("设置 A/B 循环区间…", self.loop_dialog))
+        layout.addWidget(button(tr('设置 A/B 循环区间…'), self.loop_dialog))
         layout.addStretch()
-        hint = QLabel("自由组合你的画面\n\n拖动分隔线，调整比例\n拖动标题栏，交换位置\n双击视频，聚焦查看\n\n复制保留变换和当前进度\n复制后可独立播放与调整")
+        hint = QLabel(tr('自由组合你的画面\n\n拖动分隔线，调整比例\n拖动标题栏，交换位置\n双击视频，聚焦查看\n\n复制保留变换和当前进度\n复制后可独立播放与调整'))
         hint.setObjectName("sub")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -1010,6 +1059,7 @@ class MainWindow(QMainWindow):
         return self.panes.get(self.active_id)
 
     def notify(self, message, timeout=6000):
+        self._notification_deadline = monotonic() + timeout / 1000 if timeout else None
         self.statusBar().showMessage(message, timeout)
 
     def select(self, pane_id):
@@ -1049,12 +1099,12 @@ class MainWindow(QMainWindow):
         self._updating = True
         try:
             if changed("source"):
-                self.selected_label.setText(Path(s.source).name if s.source else "空白窗格")
-                self.source_label.setText(s.source or "拖入视频，或点击添加视频")
+                self.selected_label.setText(Path(s.source).name if s.source else tr('空白窗格'))
+                self.source_label.setText(s.source or tr('拖入视频，或点击添加视频'))
                 self.source_label.setToolTip(s.source)
                 self.crop_button.setEnabled(bool(s.source))
             if changed("rotation"):
-                self.rotation_label.setText(f"当前旋转 {s.rotation}°")
+                self.rotation_label.setText(tr('当前旋转 {value1}°', value1=f'{s.rotation}'))
             if changed("fit_mode"):
                 self.fit_mode.setCurrentIndex(max(0, self.fit_mode.findData(s.fit_mode)))
             for name in ("flip_h", "flip_v", "muted", "loop"):
@@ -1070,7 +1120,7 @@ class MainWindow(QMainWindow):
                 self.volume.setValue(round(s.volume * 100))
             if changed("crop"):
                 x, y, w, h = s.crop
-                self.crop_label.setText("显示完整画面" if tuple(s.crop) == (0, 0, 1, 1) else f"保留区域 {w:.0%} × {h:.0%}\n起点 X {x:.0%} / Y {y:.0%}")
+                self.crop_label.setText(tr('显示完整画面') if tuple(s.crop) == (0, 0, 1, 1) else tr('保留区域 {value1} × {value3}\n起点 X {value5} / Y {value7}', value1=f'{w:.0%}', value3=f'{h:.0%}', value5=f'{x:.0%}', value7=f'{y:.0%}'))
             self._inspector_state = values
         finally:
             self._updating = False
@@ -1109,7 +1159,7 @@ class MainWindow(QMainWindow):
                 and self.root_widget is self.canvas_workspace):
             self.canvas_workspace.sync_panes(list(self.panes.values()))
             self.canvas_workspace.set_editing(not self.clean_mode)
-            self.count_label.setText(f"{len(self.panes)} 个画面  ·  GridStudio {__version__}")
+            self.count_label.setText(tr('{value0} 个画面  ·  GridStudio {value2}', value0=f'{len(self.panes)}', value2=f'{__version__}'))
             self.select(self.active_id or next(iter(self.panes)))
             self.playback.refresh_activity()
             return
@@ -1159,8 +1209,8 @@ class MainWindow(QMainWindow):
                 self.root_widget = build(self.tree)
             self.stage_layout.addWidget(self.root_widget)
             self.root_widget.show()
-            self.focus_button.setText("返回布局" if self.focus_id else "聚焦")
-            self.count_label.setText(f"{len(self.panes)} 个画面  ·  GridStudio {__version__}")
+            self.focus_button.setText(tr('返回布局') if self.focus_id else tr('聚焦'))
+            self.count_label.setText(tr('{value0} 个画面  ·  GridStudio {value2}', value0=f'{len(self.panes)}', value2=f'{__version__}'))
             self.select(self.active_id or next(iter(self.panes)))
         finally:
             self.setUpdatesEnabled(True)
@@ -1183,7 +1233,7 @@ class MainWindow(QMainWindow):
 
     def add_blank(self, pane_id=None, axis="horizontal"):
         if len(self.panes) >= 64:
-            self.notify("最多支持 64 个窗格；同时播放数量取决于硬件性能。")
+            self.notify(tr('最多支持 64 个窗格；同时播放数量取决于硬件性能。'))
             return
         self.prepare_change()
         target = pane_id or self.active_id
@@ -1205,7 +1255,7 @@ class MainWindow(QMainWindow):
         self.tree = split_leaf(self.tree, pane_id, state.id, axis)
         self.active_id = state.id
         self.rebuild()
-        self.notify("已复制窗格，保留进度、裁剪、旋转、镜像、音量和播放速度。两个窗格可独立调整。")
+        self.notify(tr('已复制窗格，保留进度、裁剪、旋转、镜像、音量和播放速度。两个窗格可独立调整。'))
 
     def remove_pane(self, pane_id):
         if pane_id not in self.panes:
@@ -1230,7 +1280,7 @@ class MainWindow(QMainWindow):
         self.prepare_change()
         self.tree = swap_leaves(self.tree, a, b)
         self.rebuild()
-        self.notify("已交换窗格位置")
+        self.notify(tr('已交换窗格位置'))
 
     def preset_selected(self, index):
         key = self.layout_combo.itemData(index)
@@ -1257,11 +1307,11 @@ class MainWindow(QMainWindow):
         else:
             self.tree = make_layout(ids, key)
         self.rebuild()
-        self.notify("已应用布局；现有窗格全部保留。拖动分隔线可继续调整。")
+        self.notify(tr('已应用布局；现有窗格全部保留。拖动分隔线可继续调整。'))
 
     def open_files(self, pane_id=None):
         pane_id = pane_id if isinstance(pane_id, str) else None
-        files, _ = QFileDialog.getOpenFileNames(self, "添加视频（可多选）", "", VIDEO_FILTER)
+        files, _ = QFileDialog.getOpenFileNames(self, tr('添加视频（可多选）'), "", tr(VIDEO_FILTER))
         if files:
             self.add_files(files, pane_id)
 
@@ -1280,7 +1330,7 @@ class MainWindow(QMainWindow):
             target = None
             if dest is None:
                 if len(self.panes) >= 64:
-                    self.notify("最多支持 64 个窗格，超出部分未添加。")
+                    self.notify(tr('最多支持 64 个窗格，超出部分未添加。'))
                     break
                 state = PaneState(source=path, paused=False)
                 self.raise_new_layer(state)
@@ -1306,7 +1356,7 @@ class MainWindow(QMainWindow):
         if auto_grid:
             self.tree = make_layout(leaf_ids(self.tree), "grid")
         self.rebuild()
-        self.notify(f"已添加 {len(paths)} 个视频。默认静音，按 M 或在右键菜单开启声音。")
+        self.notify(tr('已添加 {value1} 个视频。默认静音，按 M 或在右键菜单开启声音。', value1=f'{len(paths)}'))
 
     def rotate(self, degrees=90):
         if self.active():
@@ -1317,7 +1367,7 @@ class MainWindow(QMainWindow):
     def start_crop(self):
         if self.active() and self.active().state.source:
             self.active().canvas.start_crop()
-            self.notify("裁剪模式：在原始画面上拖出需要保留的区域，松开应用；Esc 取消。", 0)
+            self.notify(tr('裁剪模式：在原始画面上拖出需要保留的区域，松开应用；Esc 取消。'), 0)
 
     def reset_transform(self):
         if self.active():
@@ -1337,7 +1387,7 @@ class MainWindow(QMainWindow):
     def escape(self):
         if self.active() and self.active().canvas.crop_active:
             self.active().canvas.cancel_crop()
-            self.notify("已取消裁剪")
+            self.notify(tr('已取消裁剪'))
         elif self.focus_id:
             self.toggle_focus()
         elif self.isFullScreen():
@@ -1377,7 +1427,7 @@ class MainWindow(QMainWindow):
         return data
 
     def save_dialog(self):
-        path, _ = QFileDialog.getSaveFileName(self, "保存工作区", str(self.session_path or "我的多画面.gstudio"), SESSION_FILTER)
+        path, _ = QFileDialog.getSaveFileName(self, tr('保存工作区'), str(self.session_path or tr('我的多画面.gstudio')), tr(SESSION_FILTER))
         if path:
             if not Path(path).suffix:
                 path += ".gstudio"
@@ -1391,14 +1441,14 @@ class MainWindow(QMainWindow):
             temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             temp.replace(target)
             self.session_path = target
-            self.notify("工作区已保存：" + str(target))
+            self.notify(tr('工作区已保存：{path}', path=str(target)))
             return True
         except (OSError, ValueError) as e:
-            QMessageBox.warning(self, "无法保存", str(e))
+            QMessageBox.warning(self, tr('无法保存'), i18n.error_text(str(e)))
             return False
 
     def load_dialog(self):
-        path, _ = QFileDialog.getOpenFileName(self, "打开工作区", "", SESSION_FILTER)
+        path, _ = QFileDialog.getOpenFileName(self, tr('打开工作区'), "", tr(SESSION_FILTER))
         if path:
             self.load_session(path)
 
@@ -1406,11 +1456,11 @@ class MainWindow(QMainWindow):
         try:
             target = Path(path)
             if target.stat().st_size > 4 * 1024 * 1024:
-                raise ValueError("工作区文件过大（上限 4 MB）")
+                raise ValueError(tr('工作区文件过大（上限 4 MB）'))
             data = json.loads(target.read_text(encoding="utf-8-sig"))
             states, tree = decode_session(data)
             if not states or tree is None:
-                raise ValueError("工作区至少需要一个窗格")
+                raise ValueError(tr('工作区至少需要一个窗格'))
             missing = []
             for s in states:
                 if s.source and not s.source.startswith(("http://", "https://", "rtsp://")):
@@ -1434,31 +1484,15 @@ class MainWindow(QMainWindow):
             self.rebuild()
             self.set_clean_mode(self.clean_mode)
             if missing:
-                QMessageBox.warning(self, "部分视频路径已失效", "布局和变换已恢复。请在对应窗格右键选择「打开 / 替换视频」重新定位。\n\n" + "\n".join(missing[:8]))
-            self.notify("已恢复工作区：" + target.name)
+                QMessageBox.warning(self, tr('部分视频路径已失效'), tr('布局和变换已恢复。请在对应窗格右键选择「打开 / 替换视频」重新定位。\n\n') + "\n".join(missing[:8]))
+            self.notify(tr('已恢复工作区：{name}', name=target.name))
             return True
         except (OSError, ValueError, TypeError, KeyError, RecursionError) as e:
-            QMessageBox.warning(self, "无法打开工作区", str(e))
+            QMessageBox.warning(self, tr('无法打开工作区'), i18n.error_text(str(e)))
             return False
 
     def show_help(self):
-        QMessageBox.information(self, "关于 GridStudio", f"GridStudio {__version__} · 自由画布播放器\n\n"
-            "默认只显示视频，不显示工具栏、标题、进度条或侧栏。\n"
-            "拖入视频即可播放；右键打开操作菜单。\n"
-            "Tab 显示 / 隐藏编辑界面；F11 全屏后只保留画面。\n"
-            "默认保持原视频比例、完整显示。右键 → 画面 → 显示方式，可选择完整显示、裁切铺满或拉伸填满。\n"
-            "默认自由画布：Tab 编辑，拖动画面移动，拖动边角改变尺寸。\n"
-            "保持原比例时，图层补出的留白会透出下方视频。\n"
-            "移动鼠标显示文件名、进度条、播放/暂停、静音和音量，静止 2 秒后隐藏；拖动时保持显示。\n"
-            "可拖动进度条定位，A/B 标记显示循环范围。\n"
-            "右键 → 图层，可置顶、置底、上移或下移一层，以及精确设置坐标和尺寸。\n"
-            "布局菜单可切换网格分屏。播放时隐藏画布选择框和缩放手柄。\n"
-            "复制会保留裁剪、旋转、镜像和当前进度。原视频文件不会被修改。\n\n"
-            "快捷键\nCtrl+O 添加视频  ·  Ctrl+D 复制  ·  Ctrl+S 保存\n"
-            "空格 播放/暂停  ·  M 静音  ·  ←/→ 后退/前进5秒\nR 旋转  ·  C 裁剪  ·  F 聚焦  ·  Tab 编辑界面  ·  F11 全屏\n\n"
-            "L 循环开关；[ / ] 设置 A/B 区间；Ctrl+G 同步所有视频。\n"
-            "同步组联动播放、暂停、定位和速度，并定期校正时间差；不保证硬件逐帧锁定。\n"
-            "参考 GridPlayer 的多画面理念，以 PySide6 / Qt Multimedia 独立实现。")
+        QMessageBox.information(self, tr('关于 GridStudio'), tr('GridStudio {value1} · 自由画布播放器\n\n默认只显示视频，不显示工具栏、标题、进度条或侧栏。\n拖入视频即可播放；右键打开操作菜单。\nTab 显示 / 隐藏编辑界面；F11 全屏后只保留画面。\n默认保持原视频比例、完整显示。右键 → 画面 → 显示方式，可选择完整显示、裁切铺满或拉伸填满。\n默认自由画布：Tab 编辑，拖动画面移动，拖动边角改变尺寸。\n保持原比例时，图层补出的留白会透出下方视频。\n移动鼠标显示文件名、进度条、播放/暂停、静音和音量，静止 2 秒后隐藏；拖动时保持显示。\n可拖动进度条定位，A/B 标记显示循环范围。\n右键 → 图层，可置顶、置底、上移或下移一层，以及精确设置坐标和尺寸。\n布局菜单可切换网格分屏。播放时隐藏画布选择框和缩放手柄。\n复制会保留裁剪、旋转、镜像和当前进度。原视频文件不会被修改。\n\n快捷键\nCtrl+O 添加视频  ·  Ctrl+D 复制  ·  Ctrl+S 保存\n空格 播放/暂停  ·  M 静音  ·  ←/→ 后退/前进5秒\nR 旋转  ·  C 裁剪  ·  F 聚焦  ·  Tab 编辑界面  ·  F11 全屏\n\nL 循环开关；[ / ] 设置 A/B 区间；Ctrl+G 同步所有视频。\n同步组联动播放、暂停、定位和速度，并定期校正时间差；不保证硬件逐帧锁定。\n参考 GridPlayer 的多画面理念，以 PySide6 / Qt Multimedia 独立实现。', value1=f'{__version__}'))
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -1480,16 +1514,23 @@ class MainWindow(QMainWindow):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="GridStudio 多画面播放器")
-    parser.add_argument("files", nargs="*", help="视频文件或 .gstudio 工作区")
+    language_parser = argparse.ArgumentParser(add_help=False)
+    language_parser.add_argument("--language", choices=("en", "zh_CN"))
+    language_args, _ = language_parser.parse_known_args()
+    i18n.initialize(language_args.language)
+    parser = argparse.ArgumentParser(description=tr('GridStudio 多画面播放器'))
+    parser.add_argument("--language", choices=("en", "zh_CN"), help="UI language for this launch / 本次启动的界面语言")
+    parser.add_argument("files", nargs="*", help=tr('视频文件或 .gstudio 工作区'))
     parser.add_argument("--smoke-test", metavar="PNG", help=argparse.SUPPRESS)
     parser.add_argument("--smoke-hover", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--edit", action="store_true", help="启动时显示画布编辑框")
+    parser.add_argument("--edit", action="store_true", help=tr('启动时显示画布编辑框'))
     args = parser.parse_args()
     app = QApplication(sys.argv[:1])
     app.setApplicationName("GridStudio")
     app.setApplicationVersion(__version__)
     app.setOrganizationName("GridStudio")
+    app.setDesktopFileName("io.github.ssjjrrr.GridStudio")
+    i18n.initialize()
     app.setStyle("Fusion")
     palette = QPalette()
     for role, color in [
@@ -1530,7 +1571,8 @@ def main():
             exit_code = 0 if decoded and saved else 2
             try:
                 capture.with_suffix(".json").write_text(json.dumps({
-                    "version": __version__, "platform": app.platformName(),
+                    "version": __version__, "platform": app.platformName(), "language": i18n.language(),
+                    "qt_translation_loaded": i18n.qt_translation_loaded(),
                     "media": media, "capture_saved": saved, "passed": exit_code == 0,
                 }, ensure_ascii=False, indent=2), encoding="utf-8")
             except OSError:

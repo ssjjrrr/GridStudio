@@ -1,4 +1,4 @@
-name: Windows tests and portable build
+name: Cross-platform tests and release packages
 
 on:
   push:
@@ -9,143 +9,197 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  windows:
-    runs-on: windows-2022
-    timeout-minutes: 25
+  native:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: Windows-x64
+            runner: windows-2022
+            python_arch: x86_64
+            qt_platform: windows
+            extension: zip
+          - target: Linux-x64
+            runner: ubuntu-22.04
+            python_arch: x86_64
+            qt_platform: xcb
+            extension: tar.gz
+          - target: macOS-arm64
+            runner: macos-15
+            python_arch: aarch64
+            qt_platform: cocoa
+            extension: zip
+          - target: macOS-x64
+            runner: macos-15-intel
+            python_arch: x86_64
+            qt_platform: cocoa
+            extension: zip
     defaults:
       run:
-        shell: pwsh
+        shell: bash
     env:
       QT_QPA_PLATFORM: offscreen
       QT_MEDIA_BACKEND: ffmpeg
+      GRIDSTUDIO_LANGUAGE: zh_CN
       PYTHONUTF8: '1'
       PYTHONUNBUFFERED: '1'
 
     steps:
-      # Upstream action definitions are linked in docs/development.md.
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
-      # Python 3.12 security releases have no official Windows installers.
-      # uv supplies the pinned standalone build instead of downgrading Python.
+      # Native builds: PyInstaller is not a cross compiler.
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: '0.13.4'
           python-version: '3.12.14'
-          python-arch: x86_64
+          python-arch: ${{ matrix.python_arch }}
           enable-cache: true
+
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libegl1 libgl1 libdbus-1-3 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-render-util0 libpulse0 libglib2.0-bin fonts-noto-cjk
 
       - name: Install fixed dependencies
         run: |
           uv venv --python 3.12.14 --seed .venv
-          if ($LASTEXITCODE -ne 0) { throw "Failed to create virtual environment" }
-          .\.venv\Scripts\python.exe -c "import sys; assert sys.version_info[:3] == (3, 12, 14), sys.version"
-          if ($LASTEXITCODE -ne 0) { throw "Unexpected Python runtime" }
-          .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
-          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          .\.venv\Scripts\python.exe -VV
-          .\.venv\Scripts\python.exe -m pip freeze | Set-Content -Encoding utf8 artifacts\dependencies.txt
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            PYTHON_EXE="$PWD/.venv/Scripts/python.exe"
+          else
+            PYTHON_EXE="$PWD/.venv/bin/python"
+          fi
+          echo "PYTHON_EXE=$PYTHON_EXE" >> "$GITHUB_ENV"
+          "$PYTHON_EXE" -c "import sys; assert sys.version_info[:3] == (3, 12, 14), sys.version"
+          "$PYTHON_EXE" -m pip install -r requirements-dev.txt
+          mkdir -p artifacts
+          "$PYTHON_EXE" -VV
+          "$PYTHON_EXE" -m pip freeze > artifacts/dependencies.txt
 
-      - name: Full regression suite including real decoding and deadlock subprocess
+      - name: Full regression suite including decoding and deadlock subprocess
         timeout-minutes: 8
+        run: '"$PYTHON_EXE" scripts/run_diagnostics.py --output artifacts/regression-diagnostics --idle-timeout 60 --timeout 420 -- "$PYTHON_EXE" -u -m pytest tests -vv -o faulthandler_timeout=30 --junitxml=artifacts/tests.xml'
+
+      - name: Repeated macOS ARM synchronized player disposal
+        if: matrix.target == 'macOS-arm64'
+        timeout-minutes: 12
+        env:
+          GRIDSTUDIO_SYNC_DISPOSAL_REPEATS: '50'
         run: |
-          .\.venv\Scripts\python.exe -m pytest tests -q -o faulthandler_timeout=30 --junitxml=artifacts\tests.xml
-          if ($LASTEXITCODE -ne 0) { throw "Regression suite failed" }
+          set +e
+          "$PYTHON_EXE" scripts/run_diagnostics.py --output artifacts/sync-disposal-offscreen --idle-timeout 60 --timeout 300 -- "$PYTHON_EXE" -u -m pytest tests/test_modes_loops_sync.py::test_sync_group_links_seek_play_pause_rate_and_survives_leader_close -vv -o faulthandler_timeout=30 --junitxml=artifacts/sync-disposal-offscreen.xml
+          offscreen_status=$?
+          QT_QPA_PLATFORM=cocoa "$PYTHON_EXE" scripts/run_diagnostics.py --output artifacts/sync-disposal-cocoa --idle-timeout 60 --timeout 300 -- "$PYTHON_EXE" -u -m pytest tests/test_modes_loops_sync.py::test_sync_group_links_seek_play_pause_rate_and_survives_leader_close -vv -o faulthandler_timeout=30 --junitxml=artifacts/sync-disposal-cocoa.xml
+          cocoa_status=$?
+          if [[ "$offscreen_status" -ne 0 || "$cocoa_status" -ne 0 ]]; then
+            exit 1
+          fi
+          "$PYTHON_EXE" - <<'PY'
+          import xml.etree.ElementTree as ET
+          for backend in ("offscreen", "cocoa"):
+              path = f"artifacts/sync-disposal-{backend}.xml"
+              cases = list(ET.parse(path).getroot().iter("testcase"))
+              assert len(cases) == 50, (path, len(cases))
+              assert len({(case.get("classname"), case.get("name")) for case in cases}) == 50, path
+              assert not any(case.find(tag) is not None for case in cases for tag in ("failure", "error", "skipped")), path
+              print(f"Verified {backend}: 50 distinct executed cases, no failures or skips")
+          PY
 
       - name: Isolated real decoder hover seek
         timeout-minutes: 3
         env:
           GRIDSTUDIO_REAL_HOVER_SEEK: '1'
+          QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
         run: |
-          .\.venv\Scripts\python.exe -m pytest tests/test_hover_controls.py::test_real_video_hover_seek_updates_paused_decoder_frame -q -o faulthandler_timeout=30 --junitxml=artifacts\hover-seek.xml
-          if ($LASTEXITCODE -ne 0) { throw "Real hover seek failed" }
+          command=("$PYTHON_EXE" -m pytest tests/test_hover_controls.py::test_real_video_hover_seek_updates_paused_decoder_frame -q -o faulthandler_timeout=30 --junitxml=artifacts/hover-seek.xml)
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a -s "-screen 0 1920x1200x24" "${command[@]}"
+          else
+            "${command[@]}"
+          fi
 
-      - name: Isolated real decoder transport and audio controls
+      - name: Isolated real decoder playback and audio controls
         timeout-minutes: 3
         env:
           GRIDSTUDIO_REAL_HOVER_TRANSPORT: '1'
+          QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
         run: |
-          .\.venv\Scripts\python.exe -m pytest tests/test_hover_transport.py::test_real_media_buttons_play_pause_and_volume_update_audio -q -o faulthandler_timeout=30 --junitxml=artifacts\hover-transport.xml
-          if ($LASTEXITCODE -ne 0) { throw "Real hover transport failed" }
+          command=("$PYTHON_EXE" -m pytest tests/test_hover_transport.py::test_real_media_buttons_play_pause_and_volume_update_audio -q -o faulthandler_timeout=30 --junitxml=artifacts/hover-transport.xml)
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a -s "-screen 0 1920x1200x24" "${command[@]}"
+          else
+            "${command[@]}"
+          fi
 
-      - name: Build complete portable application
+      - name: Native window interaction and language checks
+        timeout-minutes: 5
+        env:
+          QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
+        run: |
+          command=("$PYTHON_EXE" -m pytest tests/test_free_canvas.py tests/test_hover_controls.py tests/test_hover_transport.py tests/test_i18n.py -q -o faulthandler_timeout=30 --junitxml=artifacts/native-interaction.xml)
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a -s "-screen 0 1920x1200x24" "${command[@]}"
+          else
+            "${command[@]}"
+          fi
+
+      - name: Build native application
         timeout-minutes: 10
-        run: .\build.ps1
+        run: '"$PYTHON_EXE" scripts/build.py'
 
-      - name: Verify bundled files, license hashes and executable startup
-        timeout-minutes: 2
+      - name: Create release archives
         run: |
-          $expectedVersion = .\.venv\Scripts\python.exe -c "from gridstudio import __version__; print(__version__)"
-          $versionInfo = (Get-Item -LiteralPath dist\GridStudio\GridStudio.exe).VersionInfo
-          if ($versionInfo.FileVersion -ne $expectedVersion -or $versionInfo.ProductVersion -ne $expectedVersion) {
-              throw "Windows executable version does not match the application version"
-          }
-          @'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-          import subprocess
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            "$PYTHON_EXE" scripts/package_release.py --output dist/release
+          else
+            "$PYTHON_EXE" scripts/package_release.py --output dist/release --skip-source
+          fi
 
-          from PySide6.QtGui import QImage
-          from gridstudio import __version__
+      - name: Extract release archive and verify actual native application
+        timeout-minutes: 4
+        env:
+          QT_QPA_PLATFORM: ${{ matrix.qt_platform }}
+        run: |
+          archives=(dist/release/GridStudio-*-${{ matrix.target }}.${{ matrix.extension }})
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          command=("$PYTHON_EXE" scripts/verify_bundle.py --archive "${archives[0]}" --output artifacts)
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a -s "-screen 0 1920x1200x24" "${command[@]}"
+          else
+            "${command[@]}"
+          fi
 
-          project = Path.cwd()
-          bundle = project / "dist" / "GridStudio"
-          required = ["GridStudio.exe", "README.txt", "CHANGELOG.md", "LICENSE", "THIRD_PARTY_NOTICES.txt",
-                      "INTERACTION_PERFORMANCE.txt", "PERFORMANCE.json", "VALIDATION.md",
-                      "licenses/SOURCES.json", "demo/sample.mp4",
-                      "demo/sample-short.mp4", "demo/自由画布与图层.gstudio"]
-          for relative in required:
-              assert (bundle / relative).is_file(), f"Missing bundled file: {relative}"
-          for pattern in ("Qt6Core.dll", "Qt6Multimedia.dll", "avcodec-*.dll", "avformat-*.dll"):
-              assert any((bundle / "_internal").rglob(pattern)), f"Missing runtime: {pattern}"
-          for forbidden in ("icuuc.dll", "icudt78.dll"):
-              assert not any((bundle / "_internal").rglob(forbidden)), f"Unexpected shadowed system DLL: {forbidden}"
-          manifest = json.loads((bundle / "licenses/SOURCES.json").read_text(encoding="utf-8"))
-          for name, record in manifest.items():
-              data = (bundle / "licenses" / name).read_bytes()
-              assert len(data) == record["bytes"], f"License length mismatch: {name}"
-              assert hashlib.sha256(data).hexdigest() == record["sha256"], f"License hash mismatch: {name}"
-          image_path = project / "artifacts" / "portable-smoke.png"
-          environment = dict(os.environ)
-          environment.pop("PYTHONPATH", None)
-          subprocess.run([str(bundle / "GridStudio.exe"), "--smoke-test", str(image_path),
-                          str(bundle / "demo/自由画布与图层.gstudio")],
-                         cwd=bundle, env=environment, timeout=30, check=True)
-          image = QImage(str(image_path))
-          assert not image.isNull() and image.width() >= 600 and image.height() >= 400, "Invalid portable smoke capture"
-          diagnostics = image_path.with_suffix(".json")
-          assert diagnostics.is_file(), "Missing portable media smoke diagnostics"
-          report = json.loads(diagnostics.read_text(encoding="utf-8"))
-          assert report["version"] == __version__ and report["passed"] and report["capture_saved"], report
-          assert len(report["media"]) == 3 and all(item["frame_valid"] and item["error"] == "NoError"
-                                                and item["duration_ms"] > 0 for item in report["media"]), report
-          assert all(Path(item["source"]).name == item["source"] for item in report["media"]), report
-          print("Portable files, license hashes, capture and decoded media verified.")
-          '@ | .\.venv\Scripts\python.exe -
-          if ($LASTEXITCODE -ne 0) { throw "Portable verification failed" }
-
-      - name: Upload verification logs and smoke capture
+      - name: Upload verification records and screenshots
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: windows-test-results
-          path: artifacts/
+          name: verification-${{ matrix.target }}
+          path: |
+            artifacts/*.xml
+            artifacts/*.json
+            artifacts/*.png
+            artifacts/*.txt
+            artifacts/*.log
+            artifacts/regression-diagnostics/**
+            artifacts/sync-disposal-offscreen/**
+            artifacts/sync-disposal-cocoa/**
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload verified portable directory
+      - name: Upload verified release archives
         uses: actions/upload-artifact@v6
         with:
-          name: GridStudio-Windows-x64
-          path: dist/GridStudio/
+          name: release-${{ matrix.target }}
+          path: dist/release/*
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

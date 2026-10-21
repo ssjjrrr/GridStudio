@@ -1,0 +1,86 @@
+{
+  "format": "gridstudio",
+  "version": 1,
+  "panes": [
+    {
+      "id": "881126fecb0f4468955ba12d3d8469b2",
+      "source": "sample-short.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "stretch",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 500,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "z_order": 0
+    },
+    {
+      "id": "2b11add866994cae85f4973028d15b6e",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "contain",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 2000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 1000,
+      "loop_end_ms": 4000,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": [
+        0.24,
+        0.1,
+        0.6,
+        0.82
+      ],
+      "z_order": 1
+    }
+  ],
+  "layout": {
+    "axis": "horizontal",
+    "sizes": [
+      1.0,
+      1.0
+    ],
+    "children": [
+      {
+        "pane": "881126fecb0f4468955ba12d3d8469b2"
+      },
+      {
+        "pane": "2b11add866994cae85f4973028d15b6e"
+      }
+    ]
+  },
+  "layout_mode": "canvas"
+}

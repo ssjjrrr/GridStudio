@@ -137,11 +137,13 @@ def test_position_updates_only_update_timeline_and_changed_time_text(hover_windo
 
     for position in range(2401, 2801):
         pane.player.positionChanged.emit(position)
+    drain_events(qapp)
 
     assert hover.bar._position == 2800
     assert hover.time_label.text() == "00:02 / 00:12"
     assert counts == {}, counts
     pane.player.positionChanged.emit(3000)
+    drain_events(qapp)
     assert hover.time_label.text() == "00:03 / 00:12"
     assert counts["time_text"] == 1
     assert counts["time_metrics"] == 1

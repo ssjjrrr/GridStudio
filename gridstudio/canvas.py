@@ -8,6 +8,8 @@ from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen, QTransform
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 from PySide6.QtWidgets import QFrame, QGraphicsItem, QGraphicsRectItem, QGraphicsScene, QGraphicsView
 
+from .i18n import tr, translated_existing
+
 
 class VideoCanvas(QGraphicsView):
     """A video output whose crop always refers to the original source image.
@@ -88,6 +90,12 @@ class VideoCanvas(QGraphicsView):
 
     def source_size(self) -> QSizeF:
         return QSizeF(self._source_size)
+
+    def retranslate_ui(self):
+        # Keep the empty-picture sentinel independent of the chosen language.
+        if self._message != "拖入视频文件":
+            self._message = translated_existing(self._message)
+        self.viewport().update()
 
     @property
     def fill_mode(self) -> str:
@@ -361,8 +369,10 @@ class VideoCanvas(QGraphicsView):
             painter.setBrush(QColor(8, 14, 23, 215))
             painter.drawRoundedRect(hint_rect, 8, 8)
             painter.setPen(QColor("#d8eefb"))
-            painter.setFont(QFont("Microsoft YaHei UI", 10))
-            painter.drawText(hint_rect, Qt.AlignmentFlag.AlignCenter, self._crop_hint)
+            font = QFont(self.font())
+            font.setPointSize(10)
+            painter.setFont(font)
+            painter.drawText(hint_rect, Qt.AlignmentFlag.AlignCenter, tr(self._crop_hint))
         else:
             bounds = self.viewport().rect()
             if self._has_media:
@@ -373,16 +383,19 @@ class VideoCanvas(QGraphicsView):
             painter.drawLine(QPointF(center.x() - 7, center.y() - 37), QPointF(center.x() + 7, center.y() - 37))
             painter.drawLine(QPointF(center.x(), center.y() - 44), QPointF(center.x(), center.y() - 30))
             painter.setPen(QColor("#b8c6d9"))
-            painter.setFont(QFont("Microsoft YaHei UI", 11))
+            font = QFont(self.font())
+            font.setPointSize(11)
+            painter.setFont(font)
             painter.drawText(QRectF(16, center.y() - 4, max(0, bounds.width() - 32), 54),
                              Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap,
-                             self._message)
+                             tr(self._message))
             if self._message == "拖入视频文件":
                 painter.setPen(QColor("#64748b"))
-                painter.setFont(QFont("Microsoft YaHei UI", 9))
+                font.setPointSize(9)
+                painter.setFont(font)
                 painter.drawText(QRectF(12, center.y() + 37, max(0, bounds.width() - 24), 42),
                                  Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap,
-                                 "可同时拖入多个视频 · 右键查看更多操作")
+                                 tr("可同时拖入多个视频 · 右键查看更多操作"))
         painter.end()
 
     def capture_image(self) -> QImage:

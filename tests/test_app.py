@@ -6,15 +6,17 @@ reparenting yet be destroyed on the next Qt event-loop turn.
 
 import json
 import os
+from contextlib import contextmanager
 from pathlib import Path
 
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 import shiboken6
-from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QObject, QPoint, QPointF, Qt
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QEnterEvent
 from PySide6.QtTest import QTest
+from scripts.qt_test_support import qt_wait
 from PySide6.QtWidgets import QApplication, QMessageBox, QSplitter
 
 from gridstudio.app import MainWindow, PANE_MIME, STYLE
@@ -33,7 +35,117 @@ def drain_events(app):
     app.processEvents()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()
-    QTest.qWait(1)
+    qt_wait(1)
+
+
+def move_pointer(widget, position, delay=5):
+    """Deliver native-window mouse input without requiring a desktop cursor warp.
+
+    Qt's QWidget overload only warps QCursor for a button-free move. Desktop
+    services may reject that OS operation without delivering any Qt event.
+    The QWindow overload goes through Qt's QPA event delivery and hit testing.
+    Offscreen checks retain their existing synthetic platform cursor behavior.
+    """
+    if QApplication.platformName() in ("offscreen", "minimal"):
+        QTest.mouseMove(widget, position, delay)
+    else:
+        window = widget.window()
+        pointer = getattr(window, "_test_native_pointer", None)
+        if pointer is not None:
+            pointer.position = window.windowHandle().mapToGlobal(widget.mapTo(window, position))
+        QTest.mouseMove(window.windowHandle(), widget.mapTo(window, position), delay)
+
+
+def _pointer_button(action, widget, button, modifier=Qt.KeyboardModifier.NoModifier, pos=QPoint(), delay=-1):
+    method = getattr(QTest, action)
+    if QApplication.platformName() in ("offscreen", "minimal"):
+        method(widget, button, modifier, pos, delay)
+    else:
+        window = widget.window()
+        local = widget.rect().center() if pos.isNull() else pos
+        pointer = getattr(window, "_test_native_pointer", None)
+        if pointer is not None:
+            pointer.position = window.windowHandle().mapToGlobal(widget.mapTo(window, local))
+        method(window.windowHandle(), button, modifier, widget.mapTo(window, local), delay)
+
+
+def press_pointer(widget, button, modifier=Qt.KeyboardModifier.NoModifier, pos=QPoint(), delay=-1):
+    _pointer_button("mousePress", widget, button, modifier, pos, delay)
+
+
+def release_pointer(widget, button, modifier=Qt.KeyboardModifier.NoModifier, pos=QPoint(), delay=-1):
+    _pointer_button("mouseRelease", widget, button, modifier, pos, delay)
+
+
+def click_pointer(widget, button, modifier=Qt.KeyboardModifier.NoModifier, pos=QPoint(), delay=-1):
+    _pointer_button("mouseClick", widget, button, modifier, pos, delay)
+
+
+@contextmanager
+def native_pointer_driver(window, app):
+    """Keep desktop queries consistent with Qt's injected native-window input.
+
+    QTest's QWindow overload dispatches QPA events without warping the physical
+    desktop pointer. This adapter supplies only that external desktop state to
+    the hover code. Actual Qt window dispatch, child hit testing (including
+    masks), Enter/Leave, timers and hover behavior remain under test. These are
+    native-window synthetic-input checks, not OS cursor-permission checks.
+    """
+    if app.platformName() in ("offscreen", "minimal"):
+        yield
+        return
+    from gridstudio import hover_controls
+
+    class Pointer(QObject):
+        def __init__(self):
+            super().__init__()
+            # Do not inherit whichever desktop pixel the preceding test (or
+            # the CI desktop service) happened to leave the physical cursor on.
+            self.position = window.mapToGlobal(QPoint(-32, -32))
+
+        def eventFilter(self, watched, event):
+            if event.type() in (QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress,
+                                QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick):
+                # The test driver owns this logical desktop. Ignore unrelated
+                # physical cursor traffic instead of mixing two input streams.
+                if event.globalPosition().toPoint() != self.position:
+                    return True
+            elif event.type() == QEvent.Type.Enter and hasattr(event, "globalPosition"):
+                # Qt synthesizes Enter when a child appears/disappears. On a
+                # native backend that event can use the OS cursor rather than
+                # the QWindow-injected position. Keep this one external input
+                # coordinate consistent with the logical desktop adapter.
+                if event.globalPosition().toPoint() != self.position:
+                    local = watched.mapFromGlobal(self.position)
+                    if not (0 <= local.x() < watched.width() and 0 <= local.y() < watched.height()):
+                        return True
+                    normalized = QEnterEvent(QPointF(local), QPointF(window.mapFromGlobal(self.position)),
+                                             QPointF(self.position))
+                    QCoreApplication.sendEvent(watched, normalized)
+                    return True
+            return False
+
+        def pos(self):
+            return QPoint(self.position)
+
+        def widgetAt(self, point):
+            local = window.mapFromGlobal(point)
+            if not window.isVisible() or not window.rect().contains(local):
+                return None
+            return window.childAt(local) or window
+
+    pointer = Pointer()
+    window._test_native_pointer = pointer
+    app.installEventFilter(pointer)
+    try:
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(hover_controls, "QCursor", pointer)
+            patch.setattr(hover_controls, "QApplication", pointer)
+            yield
+    finally:
+        app.removeEventFilter(pointer)
+        del window._test_native_pointer
+        pointer.deleteLater()
 
 
 @pytest.fixture
@@ -49,6 +161,8 @@ def window(qapp, monkeypatch):
     win.show()
     drain_events(qapp)
     yield win
+    # Restore patched bound Qt methods while their native objects still exist.
+    monkeypatch.undo()
     if shiboken6.isValid(win):
         win.close()
         win.deleteLater()

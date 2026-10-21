@@ -5,10 +5,10 @@ import os
 import pytest
 from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtTest import QTest
+from scripts.qt_test_support import qt_wait
 from PySide6.QtWidgets import QStyle, QStyleOptionSlider
 
-from test_app import drain_events, qapp
+from test_app import click_pointer, drain_events, move_pointer, press_pointer, qapp, release_pointer
 from test_hover_controls import controls, hover_window, move_into_picture, synthetic_media
 from test_media import load_pane, sample_video, wait_ready, wait_until
 from test_seamless import matches
@@ -50,7 +50,7 @@ def test_transport_shows_and_hides_with_title_and_timeline_after_two_seconds(hov
     move_into_picture(pane, qapp)
     assert hover.title.isVisible() and hover.bar.isVisible()
     assert all(widget.isVisible() for widget in widgets)
-    QTest.qWait(2150)
+    qt_wait(2150)
     drain_events(qapp)
     assert not hover.isVisible()
     assert all(not widget.isVisible() for widget in widgets)
@@ -79,11 +79,11 @@ def test_play_pause_button_uses_its_own_pane_even_when_another_is_selected(hover
     win.select(first.state.id)
     order = {pane.state.id: pane.state.z_order for pane in win.panes.values()}
     move_into_picture(second, qapp)
-    QTest.mouseClick(hover.play_button, Qt.MouseButton.LeftButton)
+    click_pointer(hover.play_button, Qt.MouseButton.LeftButton)
     drain_events(qapp)
     assert calls == [(second.state.id, True)]
     assert "暂停" in hover.play_button.toolTip()
-    QTest.mouseClick(hover.play_button, Qt.MouseButton.LeftButton)
+    click_pointer(hover.play_button, Qt.MouseButton.LeftButton)
     drain_events(qapp)
     assert calls == [(second.state.id, True), (second.state.id, False)]
     assert "播放" in hover.play_button.toolTip()
@@ -96,10 +96,10 @@ def test_mute_button_and_positive_volume_keep_audio_and_saved_state_consistent(h
     hover = controls(pane)
     move_into_picture(pane, qapp)
     assert pane.state.muted and pane.audio.isMuted()
-    QTest.mouseClick(hover.mute_button, Qt.MouseButton.LeftButton)
+    click_pointer(hover.mute_button, Qt.MouseButton.LeftButton)
     drain_events(qapp)
     assert not pane.state.muted and not pane.audio.isMuted()
-    QTest.mouseClick(hover.mute_button, Qt.MouseButton.LeftButton)
+    click_pointer(hover.mute_button, Qt.MouseButton.LeftButton)
     drain_events(qapp)
     assert pane.state.muted and pane.audio.isMuted()
     hover.volume_slider.setValue(73)
@@ -152,16 +152,16 @@ def test_volume_drag_stays_visible_without_seeking_or_moving_video(hover_window,
     saved_rect = pane.state.canvas_rect
     seek_calls = []
     monkeypatch.setattr(win.playback, "seek", lambda *args: seek_calls.append(args))
-    QTest.mousePress(slider, Qt.MouseButton.LeftButton, pos=start)
+    press_pointer(slider, Qt.MouseButton.LeftButton, pos=start)
     assert slider.isSliderDown()
     assert not hover.hide_timer.isActive()
-    QTest.qWait(2100)
+    qt_wait(2100)
     drain_events(qapp)
     assert hover.isVisible() and slider.isVisible()
     assert slider.isSliderDown()
     end = QPoint(min(slider.width() - 2, start.x() + max(5, slider.width() // 4)), start.y())
-    QTest.mouseMove(slider, end, delay=5)
-    QTest.mouseRelease(slider, Qt.MouseButton.LeftButton, pos=end)
+    move_pointer(slider, end, delay=5)
+    release_pointer(slider, Qt.MouseButton.LeftButton, pos=end)
     drain_events(qapp)
     assert not slider.isSliderDown()
     assert hover.hide_timer.isActive()
@@ -227,13 +227,15 @@ def test_real_media_buttons_play_pause_and_volume_update_audio(hover_window, qap
     wait_ready(pane, position_ms=0)
     hover = controls(pane)
     move_into_picture(pane, qapp)
-    QTest.mouseClick(hover.play_button, Qt.MouseButton.LeftButton)
+    click_pointer(hover.play_button, Qt.MouseButton.LeftButton)
     wait_until(lambda: pane.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
-               and pane.player.position() > 120, "real hover play button", panes=[pane])
+               and pane.player.position() > 120 and "暂停" in hover.play_button.toolTip(),
+               "real hover play button and its queued UI update", panes=[pane])
     assert "暂停" in hover.play_button.toolTip()
-    QTest.mouseClick(hover.play_button, Qt.MouseButton.LeftButton)
-    wait_until(lambda: pane.player.playbackState() == QMediaPlayer.PlaybackState.PausedState,
-               "real hover pause button", panes=[pane])
+    click_pointer(hover.play_button, Qt.MouseButton.LeftButton)
+    wait_until(lambda: pane.player.playbackState() == QMediaPlayer.PlaybackState.PausedState
+               and "播放" in hover.play_button.toolTip(),
+               "real hover pause button and its queued UI update", panes=[pane])
     assert "播放" in hover.play_button.toolTip()
     hover.volume_slider.setValue(63)
     drain_events(qapp)

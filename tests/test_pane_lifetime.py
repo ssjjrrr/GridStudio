@@ -2,7 +2,8 @@
 
 import pytest
 import shiboken6
-from PySide6.QtCore import QEvent, QObject
+from PySide6.QtCore import QCoreApplication, QEvent, QObject
+from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from gridstudio.app import MainWindow, VideoPane
@@ -47,6 +48,7 @@ def lifetime_window(qapp, monkeypatch):
     win.show()
     drain_events(qapp)
     yield win, audit
+    monkeypatch.undo()
     # Ignore Qt's final QObject destruction; the invariant concerns live panes.
     qapp.removeEventFilter(audit)
     if shiboken6.isValid(win):
@@ -140,4 +142,40 @@ def test_duplicate_and_removal_keep_remaining_live_layers_inside_window(lifetime
         assert original.player is original_player
         assert_embedded(win)
     audit.assert_no_detached_surfaces()
+
+
+def test_queued_media_notifications_do_not_touch_controls_after_pane_removal(lifetime_window, qapp, monkeypatch):
+    win, _ = lifetime_window
+    pane = win.active()
+    hover = pane.hover_controls
+    calls = []
+    # Restore Python attributes before DeferredDelete destroys their Qt owners.
+    with monkeypatch.context() as patch:
+        for target, method in ((pane.timeline, "setValue"), (pane.timeline, "setRange"),
+                               (pane.play_button, "setIcon"), (hover.bar, "set_media"),
+                               (hover.play_button, "setIcon"), (hover.mute_button, "setIcon"),
+                               (hover.volume_slider, "setValue")):
+            original = getattr(target, method)
+
+            def record(*args, original=original, method=method, **kwargs):
+                calls.append(method)
+                return original(*args, **kwargs)
+
+            patch.setattr(target, method, record)
+        pane.player.positionChanged.emit(3000)
+        pane.player.durationChanged.emit(12000)
+        pane.player.playbackStateChanged.emit(QMediaPlayer.PlaybackState.PlayingState)
+        pane.audio.volumeChanged.emit(.7)
+        pane.audio.mutedChanged.emit(False)
+        assert calls == [], "Media notifications must not reenter widgets synchronously"
+        win.remove_pane(pane.state.id)
+        assert pane._disposed and hover._disposed
+        calls.clear()
+        # Deliver queued slots while the disposed widgets still exist, then
+        # let their normal deferred destruction happen after spies are restored.
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.MetaCall)
+        assert shiboken6.isValid(pane)
+        assert calls == []
+    drain_events(qapp)
+    assert not shiboken6.isValid(pane)
 

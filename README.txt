@@ -1,162 +1,167 @@
-GridStudio 1.0.0 · 自由画布视频播放器
-================================
+GridStudio 1.1.0 · 自由画布视频播放器
+==================================
+简体中文说明；English: README.en.txt
+项目：https://github.com/ssjjrrr/GridStudio
+下载：https://github.com/ssjjrrr/GridStudio/releases/tag/v1.1.0
 
-项目仓库：https://github.com/ssjjrrr/GridStudio
-最新版本：https://github.com/ssjjrrr/GridStudio/releases/latest
-1.0.0 发布页：https://github.com/ssjjrrr/GridStudio/releases/tag/v1.0.0
+多视频自由移动、缩放、复制与叠放；鼠标静止约 2 秒后只显示视频。
+提供中文和英文界面。默认跟随系统语言，右键 Language / 语言 可选择
+English、简体中文、System default / 跟随系统；菜单选择会保存。
+命令行 --language en / --language zh_CN 仅覆盖当前运行的语言。
 
-1.0.0 首次正式发布。增删或复制画面时只更新变化的图层；普通独立播放和全部暂停时停止无用轮询。
-同步控制合并重复设置与查询；隐藏浮层不再反复格式化文字，裁剪框采用局部重绘。
-画布移动、缩放只刷新选框新旧边缘，减少重复布局和界面状态查询。
-媒体控制保留锁顺序处理与受限时的真实解码定位回归。
-悬停进度条同时显示播放/暂停、静音和音量滑杆，保持统一显示与自动隐藏。
-自由画布中保持原比例产生的留白不会遮挡下层视频。
-默认使用自由画布，视频可任意移动、缩放、重叠，并调整前后层级。
-鼠标静止时隐藏工具栏、侧栏、窗格标题、时间线和选中边框。
-启动时只有一个空白画面；按 Tab 进入编辑状态，仅显示当前画面的边框与缩放手柄，
-画布上不显示固定工具栏。右键即可进行常用操作。
+系统与启动
+----------
+Windows 10 1809+ / Windows 11 x64：
+  完整解压 GridStudio-1.1.0-Windows-x64.zip，运行 GridStudio.exe。
+  保留整个目录，包括 _internal、licenses、demo，不要单独复制 EXE。
 
-适用系统：Windows 10（1809 或更高版本）/ Windows 11，64 位。
-基于 Python、PySide6 与 Qt Multimedia 独立实现，参考 GridPlayer 的多画面理念。
+Linux x86_64，Ubuntu 22.04+ 为支持基线：
+  tar -xzf GridStudio-1.1.0-Linux-x64.tar.gz
+  ./GridStudio/GridStudio
+  保留完整目录与符号链接；需要图形桌面，不是终端播放器。
+  程序目录中的 install-desktop-entry.sh 可添加当前用户的应用菜单入口。
+  Ubuntu 22.04 如缺少图形/音频依赖，在终端运行：
+    sudo apt-get update
+    sudo apt-get install libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxcb-render-util0 libdbus-1-3 libasound2 libpulse0
+  Ubuntu 24.04 使用 libasound2t64 替代 libasound2；其他发行版包名可能不同。
+  如果原生 Wayland 会话遇到平台插件问题，可在已启用 XWayland 的桌面尝试：
+    QT_QPA_PLATFORM=xcb ./GridStudio/GridStudio
+  其他发行版未逐一验证，不能仅凭 x86_64 架构保证运行。
 
-直接运行
---------
-Windows x64 便携包：
-https://github.com/ssjjrrr/GridStudio/releases/download/v1.0.0/GridStudio-1.0.0-Windows-x64.zip
+macOS 13+，Apple Silicon / Intel：
+  分别下载 macOS-arm64.zip / macOS-x64.zip，解压后把 GridStudio.app 拖入「应用程序」。
+  保留完整的 .app。两种架构分别构建，不是 Universal 2 应用。
+  当前使用 ad-hoc 签名，没有 Apple Developer ID 签名或公证。
+  若首次启动提示无法验证开发者或未公证，确认下载来源后，在「系统设置 → 隐私与安全性」选择「仍要打开」。
+  Apple 官方说明：https://support.apple.com/102445
 
-1. 将压缩包完整解压到一个目录，双击 GridStudio.exe。
-2. 复制或移动软件时，请保留整个 GridStudio 目录，包括 _internal、licenses 和 demo。
-   GridStudio.exe 需要同目录的运行库，不能单独复制使用。便携版无需另装 Python 或 VLC。
-3. 右键选择「工作区 → 打开」，选择 demo\自由画布与图层.gstudio，即可体验叠放画面。
-   按 Tab 后可移动和缩放，右键「图层」调整前后顺序。
-   请保留它旁边的 sample.mp4；工作区记录视频路径，不把视频嵌入工作区文件。
-   demo\显示方式对比.gstudio 从左到右演示完整显示、裁切铺满、拉伸填满；
-   demo\同步与区间循环.gstudio 演示两个同步画面在 1–3 秒区间内循环。
-   demo\叠放与悬停进度.gstudio 演示留白透出下层，以及标题、进度条和 A/B 标记。
-   demo\四画面对比.gstudio 保留原来的网格对比示例。
+所有发行包均自带 Python、Qt 与媒体运行库，无需另装 Python 或 VLC。
+SHA-256 清单与源码包在同一发布页。Linux 系统库与图形驱动仍由操作系统提供。
 
 开始使用
 --------
-1. 将本地视频拖入窗口，直接开始播放。
-2. 按 Tab 进入编辑状态：拖动画面内部移动位置，拖动边缘或四角改变大小。
-   按住 Shift 拖动边缘或四角，按画面框现有比例缩放；也可右键精确输入位置与大小。
-3. 可以让视频彼此重叠。右键「图层」可置顶、置底、上移一层、下移一层，
-   也可以从列表中选择被其他视频遮挡的画面。选中画面不会自动改变层级。
-4. 右键画面，可以复制、调整显示方式、裁剪旋转、调速或保存工作区。
-5. 再按 Tab 或 Esc 返回纯播放；按 F11 全屏，让整个屏幕只显示视频。
+1. 将本地视频拖入窗口开始播放，默认静音。
+2. 按 Tab 进入编辑状态：拖动画面内部移动，拖动边缘或四角缩放。
+   按住 Shift 可保持画面框现有比例；右键可精确输入位置和大小。
+3. 右键「图层」可置顶、置底、上移/下移一层，也可选择被遮挡的视频。
+   选中视频不会自动改变层级。
+4. 右键可复制、选择显示方式、裁剪、旋转、调速、设置循环和同步。
+5. 再按 Tab 或 Esc 返回纯播放；F11 切换全屏。
+6. 右键「工作区 → 保存」保存 .gstudio 工作区。
 
-自由画布的画面位置与尺寸按画布比例保存，窗口或屏幕大小改变时保持相对构图。
-复制会创建稍微错开的新画面并放到最上层，之后可独立移动、缩放。
-右键「布局」可以切换到原来的网格模式；网格模式下拖动分隔线调整大小，
-按 Tab 显示标题栏后拖动标题栏交换窗格位置。网格工作区按保存的网格布局打开。
-窗口模式保留系统标题栏；F11 全屏会将其隐藏。
+画面位置和尺寸按画布比例保存；改变窗口/屏幕大小时保留相对构图。
+复制把新的画面稍微错开放到最上层，然后可独立移动和缩放。
+「布局」可切换网格；拖动分隔线缩放网格，按 Tab 显示标题栏后拖动标题交换窗格。
+窗口模式保留系统标题栏；F11 全屏时隐藏。
 
-移动鼠标可暂时显示视频标题、进度条、播放/暂停、静音和音量滑杆，静止约 2 秒后一起隐藏。
-鼠标悬停在进度条上可查看对应时间，点击或拖动进度条可定位；A/B 循环标记也会显示在进度条上。
-拖动进度或音量、按住按钮期间保持显示，松开后重新计时。调高音量会自动取消静音。
-音量和静音独立作用于当前视频，播放/暂停、定位和循环操作遵循当前同步组设置。
+移动鼠标显示视频名称、进度、播放/暂停、静音和音量，静止约 2 秒后隐藏。
+悬停进度条显示对应时间，点击或拖动可以定位；A/B 标记标出循环范围。
+拖动进度或音量、按住按钮时保持显示，松开后重新计时。调高音量会自动取消静音。
+音量和静音只影响当前视频；播放、暂停、定位和循环遵循当前同步组设置。
 
-右键「画面 → 显示方式」可为当前窗格选择：
-  保持原比例（完整显示）：默认。完整显示视频或已设置的裁剪区域，画面不变形。
-  等比铺满（裁切边缘）：按原比例铺满窗格，超出窗格的边缘被隐藏。
-  拉伸填满（不裁切）：完整画面填满窗格，视频与窗格比例不同时画面会变形。
-菜单中也可将当前方式应用到全部窗格。Tab 切换编辑界面会保留所选显示方式。
-自由画布没有固定分隔线，纯播放时也不显示选框或缩放手柄。
-自由画布中完整显示且保持原比例时，视频与画面框比例不同时产生的上下或左右留白，
-会直接露出下层视频，鼠标也可以穿过留白选择下层画面。没有下层画面时显示画布背景。
-视频本身的黑色内容或文件内自带的黑边仍然正常覆盖下层，可通过裁剪去除文件自带的黑边。
-网格模式和聚焦单个视频时保留正常的留白。
+显示方式与变换
+--------------
+右键「画面 → 显示方式」可选择：
+  保持原比例（完整显示）：默认。完整显示视频或裁剪区域，不变形。
+  等比铺满（裁切边缘）：保持比例铺满画面框，隐藏超出边缘。
+  拉伸填满（不裁切）：完整画面填满框，比例不同时会变形。
+可将当前显示方式应用到所有窗格。Tab 切换编辑状态不会改变显示方式。
+自由画布纯播放时没有固定分隔线、选框或缩放手柄。
+保持原比例产生的留白会透出下层视频，也允许鼠标穿过选择下层；没有下层时显示背景。
+视频本身的黑色像素和文件内自带黑边仍然不透明，可用裁剪去除自带黑条。
+网格模式与聚焦单个视频保留普通留白。
 
-复制会保留视频来源、进度、显示方式、裁剪、旋转、镜像、速度、音量、播放状态、循环和同步组。
-未加入同步组时，各副本独立播放。裁剪和旋转只改变显示，不会修改原视频。
-框选裁剪时拖出要保留的区域，松开应用，Esc 取消。
+复制保留来源、进度、显示方式、裁剪、旋转、镜像、速度、音量、播放状态、循环和同步组。
+不在同步组中的副本独立播放。所有变换只改变显示，不修改原文件。
+框选裁剪时拖出保留区域，松开应用，Esc 取消。
 
-循环播放
---------
-右键「循环」可开启 / 关闭循环，或选择「整个视频循环」。默认循环整个视频。
-按 [ 将当前进度设为 A 点，再移动到后面的进度按 ]，即可在 A 到 B 之间循环。
-也可在「设置 A/B 循环区间…」精确输入开始、结束秒数。按 L 临时关闭 / 恢复循环，
-保留 A/B 标记；「清除 A/B 标记」恢复完整视频范围。同步组内循环设置联动。
+循环与同步
+----------
+右键「循环」控制开关或选择整个视频循环，默认循环整个视频。
+按 [ 将当前进度设为 A，再移动至后面的位置按 ] 设置 B。
+「设置 A/B 循环区间…」可精确输入秒数。L 临时关闭/恢复循环并保留标记；
+「清除 A/B 标记」恢复完整范围。同步组内的循环设置联动。
 
-同步播放
---------
-按 Ctrl+G 或右键「同步 → 同步全部视频（按时间）」，让全部视频对齐当前窗格的播放秒数。
-「同步全部视频（按百分比）」让不同时长的视频处于相同播放百分比，自动按时长比例调整
-各视频的速度，使它们同时走到结尾。「同步全部视频（保留时间差）」采用时间同步，
-保留各视频现有的时间差。也可只将需要联动的视频加入
-同一个同步组（1–4），或让窗格退出同步组。不同同步组各自独立。
-同组视频联动播放 / 暂停、拖动进度、快进 / 后退、播放速度与循环；复制窗格会加入原同步组。
-同步会定期校正时间差，适合多画面对比，但不保证硬件级逐帧锁定。
+Ctrl+G 或「同步 → 同步全部视频（按时间）」对齐到当前画面的播放秒数。
+「按百分比」将不同时长的视频对齐到相同百分比，并按时长比例调整速度，使其同时结束。
+「保留时间差」使用时间同步，保留已有时间差。也可只将部分视频加入同一组（1–4），
+或让视频退出同步组；不同组独立控制。
+同组联动播放/暂停、定位、快进/后退、速度和循环；复制会加入原同步组。
+同步定期修正时间差，适合多视频比较，但不保证硬件级逐帧锁定。
 
-右键保存为 .gstudio 工作区，可恢复画布 / 网格模式、每个画面的位置尺寸、
-前后层级、网格分隔比例、视频路径和播放状态。
-工作区不包含视频；请将视频与工作区一起移动，或右键「替换当前视频」重新定位。
+工作区与示例
+------------
+.gstudio 保存画布/网格、每个画面位置尺寸、层级、网格分隔比例、路径和播放设置。
+工作区不嵌入视频；请一同移动视频，或用「替换当前视频」重新指定路径。
+Windows/Linux 的 demo 在程序目录；macOS 在 GridStudio.app/Contents/Resources/demo，
+Finder 中右键应用并选择「显示包内容」可访问。
+通过「工作区 → 打开」选择：
+  自由画布与图层.gstudio / free-canvas-and-layers.gstudio
+  叠放与悬停进度.gstudio / overlap-and-hover-controls.gstudio
+  显示方式对比.gstudio / fit-modes.gstudio
+  同步与区间循环.gstudio / synchronized-ab-loop.gstudio
+  百分比同步.gstudio / percentage-sync.gstudio
+  四画面对比.gstudio / four-video-comparison.gstudio
+中英文文件名是相同内容的两套入口；保留旁边的 sample.mp4 与 sample-short.mp4。
 
 快捷键
 ------
-Tab             编辑画布 / 返回纯播放
-F11             切换全屏
-Ctrl+O          添加视频
-Ctrl+Shift+O    打开工作区
-Ctrl+S          保存工作区
-Ctrl+D          复制当前画面（画布上错开放到顶层）
-Ctrl+[ / ]      当前画面下移 / 上移一层
-Ctrl+Shift+[ / ] 当前画面置底 / 置顶
-Shift+方向键    编辑状态下将当前画面移动 1 像素
-Ctrl+W          关闭当前窗格
-Ctrl+Q          退出
-空格            当前窗格播放 / 暂停
-M               当前窗格静音 / 恢复声音
-L               开启 / 关闭循环（保留 A/B 标记）
-[ / ]           设置循环 A / B 点
-Ctrl+G          同步全部视频并对齐当前窗格
-← / →           当前窗格后退 / 前进 5 秒
-R               顺时针旋转 90°
-C               框选裁剪
-F / 双击画面    聚焦当前窗格 / 返回布局
-Esc             取消裁剪 / 返回布局 / 退出全屏 / 隐藏编辑界面
+macOS 下用 Command（⌘）替代 Ctrl；部分键盘需 Fn+F11。
+Tab                 编辑画布 / 返回纯播放
+F11                 全屏
+Ctrl+O              添加视频
+Ctrl+Shift+O        打开工作区
+Ctrl+S              保存工作区
+Ctrl+D              复制当前画面
+Ctrl+[ / ]          下移 / 上移一层
+Ctrl+Shift+[ / ]    置底 / 置顶
+Shift+方向键        编辑时移动 1 像素
+Ctrl+W              关闭当前画面
+Ctrl+Q              退出
+空格 / M            播放或暂停 / 静音
+L                   开启或关闭循环，保留标记
+[ / ]               设置循环 A / B 点
+Ctrl+G              同步全部视频到当前画面
+← / →               后退 / 前进 5 秒
+R / C               顺时针旋转 90° / 框选裁剪
+F 或双击            聚焦当前画面 / 返回布局
+Esc                 取消裁剪 / 返回布局 / 退出全屏 / 隐藏编辑界面
 
-播放说明
---------
-解码由 Qt Multimedia 的 FFmpeg 后端提供。MP4、MKV 等是容器名，能否播放还取决于内部编码、
-系统与硬件；格式兼容范围与 VLC / GridPlayer 不完全相同。无法播放时可尝试其他编码的视频。
-多个窗格会分别解码；同一视频的副本也占用额外资源。流畅程度取决于分辨率、帧率和电脑性能。
-本版限制最多 64 个窗格。工作区只保存路径和设置，不备份视频文件。
+兼容与性能
+----------
+Qt Multimedia 使用 FFmpeg 后端；MP4、MKV 是容器，能否播放还取决于编码和设备，
+格式覆盖范围与 VLC/GridPlayer 不完全相同。
+每个画面独立解码，副本也占用额外资源，最多 64 个画面。
+流畅度取决于分辨率、帧率、编码、硬件和并发数量。
+INTERACTION_PERFORMANCE.txt、INTERACTION_PERFORMANCE.en.txt 与 PERFORMANCE.json
+保存首次发布前的 Windows 性能记录；本次跨平台构建没有重新测量那些数字。
+合成帧界面耗时不能推断真实 4K 解码性能或 Linux/macOS 性能。
 
-源码运行（在源码包目录中打开 PowerShell）
---------------------------------------
-本次开发、测试和便携构建使用 Windows x64、Python 3.12.14。安装依赖需要联网。
+从源码运行和构建
+----------------
+使用 Python 3.12.14，在源码目录执行。
+Windows PowerShell：
+  python -m venv .venv
+  .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+  .\.venv\Scripts\python.exe run.py
+Linux/macOS：
+  python3 -m venv .venv
+  .venv/bin/python -m pip install -r requirements.txt
+  .venv/bin/python run.py
 
-    python -m venv .venv
-    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-    .\.venv\Scripts\python.exe run.py
-
-requirements.txt 固定使用 PySide6==6.10.2。
-运行测试：
-
-    .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-    .\.venv\Scripts\python.exe -m pytest tests -q -o faulthandler_timeout=30
-
-requirements-dev.txt 固定 pytest 和 PyInstaller 版本；两项真实悬停检查可用环境开关开启，
-详细命令见源码 docs\development.md。Windows CI 同时执行主套件及两项真实悬停检查。
-
-打包：
-
-    .\build.ps1
-
-build.ps1 会建立 .venv、安装依赖及 PyInstaller 6.20.0，生成 dist\GridStudio\GridStudio.exe。
-如果系统的 PowerShell 策略阻止执行脚本，请按所在电脑的脚本执行策略运行。
-重建时务必保留整个 dist\GridStudio 目录，并一并分发第三方声明与许可证文件。
-目录同时附带 CHANGELOG.md、INTERACTION_PERFORMANCE.txt 和 PERFORMANCE.json。
-
-完成测试及便携版验证后，可生成本地便携包、源码包和 SHA-256 清单：
-
-    .\.venv\Scripts\python.exe scripts\package_release.py --bundle dist\GridStudio --output dist\release
-
-该脚本只生成本地归档，不联系 GitHub。源码的 benchmarks\README.txt 提供各轮性能结果和
-复现命令，docs\performance-audit.md 说明审计范围；合成帧和替身计数不是实际解码 FPS。
+安装 requirements-dev.txt 后，在测试进程中设置 GRIDSTUDIO_LANGUAGE=zh_CN，再运行：
+  python -m pytest tests -q -o faulthandler_timeout=30
+这里 python 指上述虚拟环境解释器。两项真实悬停测试另有环境开关；详细命令与平台依赖见
+源码 docs/development.md（English: docs/development.en.md）。
+原生构建：Windows ./build.ps1；Linux/macOS ./build.sh。
+已安装依赖时也可 python scripts/build.py。
+本地发布打包：python scripts/package_release.py --output dist/release
+最终归档验证：python scripts/verify_bundle.py --archive <归档路径> --output artifacts
+这些脚本不自动上传或创建 GitHub Release。
 
 许可证
 ------
-GridStudio 原创应用代码采用 MIT 许可证，见 LICENSE。
-第三方运行库保留各自许可证；版本、上游源码和许可证文本来源见 THIRD_PARTY_NOTICES.txt 与 licenses。
+原创代码采用 MIT 许可证，见 LICENSE。
+第三方组件见 THIRD_PARTY_NOTICES.txt / THIRD_PARTY_NOTICES.en.txt 与 licenses。
+licenses/runtime-versions.json 和 FFmpeg-BUILD.txt 记录当前发行包实际运行库；
+原始许可证文本未翻译或改写。参考 GridPlayer 的多画面理念，未包含其源代码。

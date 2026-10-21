@@ -9,11 +9,11 @@ import os
 import pytest
 import shiboken6
 from PySide6.QtCore import QEvent, QPoint, QRect, Qt
-from PySide6.QtTest import QTest
+from scripts.qt_test_support import qt_wait
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from gridstudio.app import MainWindow
-from test_app import drain_events, qapp
+from test_app import drain_events, move_pointer, native_pointer_driver, press_pointer, qapp, release_pointer
 from test_media import has_decoded_frame, load_pane, sample_video, wait_ready, wait_until
 from test_seamless import feed_solid
 
@@ -31,7 +31,9 @@ def hover_window(qapp, monkeypatch):
     # These tests exercise user gestures, not the independent looping clock.
     win.playback.timer.stop()
     drain_events(qapp)
-    yield win
+    with native_pointer_driver(win, qapp):
+        yield win
+    monkeypatch.undo()
     if shiboken6.isValid(win):
         win.close()
         win.deleteLater()
@@ -69,8 +71,8 @@ def move_into_picture(pane, app, offset=QPoint()):
     else:
         assert rect.height() > 1, "Hover gesture requires two actual picture pixels"
         adjacent = target + QPoint(0, 1 if target.y() < rect.bottom() else -1)
-    QTest.mouseMove(pane.canvas.viewport(), adjacent, delay=5)
-    QTest.mouseMove(pane.canvas.viewport(), target, delay=5)
+    move_pointer(pane.canvas.viewport(), adjacent, delay=5)
+    move_pointer(pane.canvas.viewport(), target, delay=5)
     drain_events(app)
 
 
@@ -97,7 +99,7 @@ def test_mouse_activity_shows_title_and_bar_then_two_seconds_idle_hides_them(hov
     assert "hover-example.mp4" in hover.title.text()
     assert hover.hide_timer.isSingleShot()
     assert hover.hide_timer.interval() == 2000
-    QTest.qWait(2150)
+    qt_wait(2150)
     drain_events(qapp)
     assert_controls_hidden(hover)
     move_into_picture(pane, qapp, QPoint(13, 0))
@@ -122,7 +124,7 @@ def test_leaving_actual_picture_hides_controls_and_another_layer_gets_its_own(ho
     assert second_hover.isVisible()
     assert "second.mp4" in second_hover.title.text()
     # Move into empty stage rather than merely sending a Leave with a stale cursor.
-    QTest.mouseMove(win.canvas_workspace, QPoint(2, 2), delay=5)
+    move_pointer(win.canvas_workspace, QPoint(2, 2), delay=5)
     QApplication.sendEvent(second.canvas.viewport(), QEvent(QEvent.Type.Leave))
     drain_events(qapp)
     assert_controls_hidden(second_hover)
@@ -135,21 +137,21 @@ def test_idle_over_bar_stays_hidden_after_synthetic_enter_until_pointer_moves(ho
     hover = controls(pane)
     move_into_picture(pane, qapp)
     point = track_point(hover.bar, .4)
-    QTest.mouseMove(hover.bar, point, delay=5)
+    move_pointer(hover.bar, point, delay=5)
     drain_events(qapp)
     assert hover.isVisible()
     pointer = hover.bar.mapToGlobal(point)
-    QTest.qWait(2150)
+    qt_wait(2150)
     drain_events(qapp)
     assert_controls_hidden(hover)
     # Hiding the bar exposes the video viewport under the same stationary
     # cursor. Its synthetic Enter must not restart the controls or timer.
     QApplication.sendEvent(pane.canvas.viewport(), QEvent(QEvent.Type.Enter))
     drain_events(qapp)
-    QTest.qWait(60)
+    qt_wait(60)
     assert_controls_hidden(hover)
     moved = pane.canvas.viewport().mapFromGlobal(pointer + QPoint(1, 0))
-    QTest.mouseMove(pane.canvas.viewport(), moved, delay=5)
+    move_pointer(pane.canvas.viewport(), moved, delay=5)
     drain_events(qapp)
     assert hover.isVisible()
 
@@ -188,21 +190,21 @@ def test_seek_bar_previews_hover_and_drag_then_seeks_target_pane_once_on_release
     move_into_picture(pane, qapp)
     bar = hover.bar
     point = track_point(bar, .35)
-    QTest.mouseMove(bar, point, delay=5)
+    move_pointer(bar, point, delay=5)
     drain_events(qapp)
     assert bar.hover_position == pytest.approx(bar.position_at(point), abs=1)
     assert bar.hover_position == pytest.approx(4200, abs=120)
     calls = []
     monkeypatch.setattr(win.playback, "seek", lambda pane_id, position: calls.append((pane_id, position)))
-    QTest.mousePress(bar, Qt.MouseButton.LeftButton, pos=point)
+    press_pointer(bar, Qt.MouseButton.LeftButton, pos=point)
     assert bar.dragging
     assert not hover.hide_timer.isActive()
-    QTest.qWait(2100)
+    qt_wait(2100)
     drain_events(qapp)
     assert bar.dragging and hover.isVisible()
     assert calls == []
     end = track_point(bar, .75)
-    QTest.mouseMove(bar, end, delay=5)
+    move_pointer(bar, end, delay=5)
     drain_events(qapp)
     assert bar.preview_position == pytest.approx(9000, abs=120)
     assert calls == []
@@ -211,7 +213,7 @@ def test_seek_bar_previews_hover_and_drag_then_seeks_target_pane_once_on_release
     pane.player.positionChanged.emit(3000)
     drain_events(qapp)
     assert bar.preview_position == pytest.approx(9000, abs=120)
-    QTest.mouseRelease(bar, Qt.MouseButton.LeftButton, pos=end)
+    release_pointer(bar, Qt.MouseButton.LeftButton, pos=end)
     drain_events(qapp)
     assert not bar.dragging
     assert calls == [(pane.state.id, bar.position_at(end))]
@@ -263,9 +265,9 @@ def test_real_video_hover_seek_updates_paused_decoder_frame(hover_window, qapp, 
     bar = hover.bar
     end = track_point(bar, .55)
     target_ms = bar.position_at(end)
-    QTest.mousePress(bar, Qt.MouseButton.LeftButton, pos=track_point(bar, .2))
-    QTest.mouseMove(bar, end, delay=5)
-    QTest.mouseRelease(bar, Qt.MouseButton.LeftButton, pos=end)
+    press_pointer(bar, Qt.MouseButton.LeftButton, pos=track_point(bar, .2))
+    move_pointer(bar, end, delay=5)
+    release_pointer(bar, Qt.MouseButton.LeftButton, pos=end)
     wait_until(lambda: abs(pane.player.position() - target_ms) <= 50
                and has_decoded_frame(pane, target_ms),
                "paused decoded frame after transient seek bar release", panes=[pane])

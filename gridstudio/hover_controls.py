@@ -5,9 +5,11 @@ Progress dragging previews locally and commits one native seek on release.
 """
 from __future__ import annotations
 
+from .i18n import tr
+
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSignalBlocker, Qt, QTimer
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSignalBlocker, Qt, QTimer, Slot
 from PySide6.QtGui import QColor, QCursor, QIcon, QLinearGradient, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import QApplication, QLabel, QSlider, QToolButton, QWidget
@@ -53,6 +55,7 @@ class _VideoTitle(QLabel):
     def __init__(self, parent):
         super().__init__(parent)
         self.setObjectName("hoverVideoTitle")
+        self.setProperty("i18nUserText", True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -312,10 +315,10 @@ class HoverControls(QObject):
         self._icons = {name: _transport_icon(name) for name in ("play", "pause", "volume", "muted")}
         self.play_button = QToolButton(self.bar)
         self.play_button.setObjectName("hoverPlayButton")
-        self.play_button.setAccessibleName("播放或暂停视频")
+        self.play_button.setAccessibleName(tr('播放或暂停视频'))
         self.mute_button = QToolButton(self.bar)
         self.mute_button.setObjectName("hoverMuteButton")
-        self.mute_button.setAccessibleName("静音或取消静音")
+        self.mute_button.setAccessibleName(tr('静音或取消静音'))
         for button in (self.play_button, self.mute_button):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
@@ -327,7 +330,7 @@ class HoverControls(QObject):
             button.released.connect(lambda button=button: self._end_interaction(button))
         self.volume_slider = QSlider(Qt.Orientation.Horizontal, self.bar)
         self.volume_slider.setObjectName("hoverVolumeSlider")
-        self.volume_slider.setAccessibleName("视频音量")
+        self.volume_slider.setAccessibleName(tr('视频音量'))
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self.volume_slider.setStyleSheet(
@@ -362,11 +365,14 @@ class HoverControls(QObject):
             target.installEventFilter(self)
         self.title.installEventFilter(self)
         self.time_label.installEventFilter(self)
-        pane.player.positionChanged.connect(self._position_changed)
-        pane.player.durationChanged.connect(self._duration_changed)
-        pane.player.playbackStateChanged.connect(self._refresh_transport)
-        pane.audio.volumeChanged.connect(self._refresh_transport)
-        pane.audio.mutedChanged.connect(self._refresh_transport)
+        # Keep Python/QtWidgets work out of synchronous native media commands.
+        # Slots are bound to this QObject, so deletion also cancels queued work.
+        queued = Qt.ConnectionType.QueuedConnection
+        pane.player.positionChanged.connect(self._position_changed, queued)
+        pane.player.durationChanged.connect(self._duration_changed, queued)
+        pane.player.playbackStateChanged.connect(self._refresh_transport, queued)
+        pane.audio.volumeChanged.connect(self._refresh_transport, queued)
+        pane.audio.mutedChanged.connect(self._refresh_transport, queued)
         pane.canvas.contentGeometryChanged.connect(self.refresh_geometry)
         self.title.hide()
         self.bar.hide()
@@ -416,6 +422,7 @@ class HoverControls(QObject):
             self._time_width = width
             self._layout_transport()
 
+    @Slot()
     def _refresh_transport(self, *_args) -> None:
         if self._disposed:
             return
@@ -429,18 +436,18 @@ class HoverControls(QObject):
         self._transport_state = state
         if previous is None or playing != previous[0]:
             self.play_button.setIcon(self._icons["pause" if playing else "play"])
-            self.play_button.setToolTip("暂停（空格）" if playing else "播放（空格）")
+            self.play_button.setToolTip(tr('暂停（空格）') if playing else tr('播放（空格）'))
             self.play_button.setProperty("playing", playing)
         if previous is None or (muted, volume == 0) != (previous[1], previous[2] == 0):
             self.mute_button.setIcon(self._icons["muted" if muted or volume == 0 else "volume"])
-            self.mute_button.setToolTip("取消静音" if muted else "静音")
+            self.mute_button.setToolTip(tr('取消静音') if muted else tr('静音'))
             self.mute_button.setProperty("muted", muted)
         if previous is None or volume != previous[2]:
             with QSignalBlocker(self.volume_slider):
                 self.volume_slider.setValue(volume)
             self.volume_label.setText(f"{volume}%")
         if previous is None or (muted, volume) != previous[1:]:
-            self.volume_slider.setToolTip(f"音量 {volume}%" + ("（已静音）" if muted else ""))
+            self.volume_slider.setToolTip(tr('音量 {value1}%', value1=f'{volume}') + (tr('（已静音）') if muted else ""))
 
     def _layout_transport(self) -> None:
         if not hasattr(self, "volume_slider"):
@@ -589,6 +596,7 @@ class HoverControls(QObject):
         if not self._interaction_active():
             self.hide_now()
 
+    @Slot("qint64")
     def _position_changed(self, position: int) -> None:
         if not self._disposed:
             # Hidden controls retain the clock but need no time formatting,
@@ -596,6 +604,7 @@ class HoverControls(QObject):
             # explicit refresh/show flushes the latest data before painting.
             self.bar.set_media(self.bar._duration, position, update_widgets=self._visible)
 
+    @Slot("qint64")
     def _duration_changed(self, duration: int) -> None:
         if not self._disposed:
             self.bar.set_media(duration, self.pane.player.position(), update_widgets=self._visible)

@@ -49,11 +49,12 @@ def distribution(values):
 def run(options):
     os.environ["QT_QPA_PLATFORM"] = options.platform
     project = options.project.resolve()
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
     sys.path.insert(0, str(project))
     from PySide6.QtCore import QCoreApplication, QEvent, QEventLoop, QObject, QPoint, QPointF, Qt, qVersion
     from PySide6.QtGui import QColor, QCursor, QImage, QMouseEvent, QRegion
     from PySide6.QtMultimedia import QVideoFrame
-    from PySide6.QtTest import QTest
+    from scripts.qt_test_support import qt_wait
     from PySide6.QtWidgets import QApplication
     from gridstudio.app import MainWindow, STYLE, VideoPane
     from gridstudio.canvas import VideoCanvas
@@ -181,8 +182,8 @@ def run(options):
         while not all(p.canvas.video_item.videoSink().videoFrame().isValid() for p in panes):
             if time.perf_counter() > deadline:
                 raise RuntimeError("Real media failed to decode four initial frames")
-            QTest.qWait(10)
-    QTest.qWait(30)
+            qt_wait(10)
+    qt_wait(30)
     flush()
 
     paint_events = PaintEvents()

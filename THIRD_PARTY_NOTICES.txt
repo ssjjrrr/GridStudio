@@ -1,20 +1,25 @@
 GridStudio · 第三方组件声明
 ==========================
+简体中文；English: THIRD_PARTY_NOTICES.en.txt
 
-GridStudio 的原创应用代码采用 MIT 许可证。下列组件及其版权、商标和许可证属于各自权利人。
-本声明记录本次构建的主要组件和上游来源，不代表对全部嵌入子组件的完整许可证审计。
-重新打包、更换运行库或进一步分发时，应同时核对实际构建的上游声明及对应源代码要求。
+GridStudio 原创应用代码采用 MIT 许可证。下列组件及其版权、商标和许可证属于各自权利人。
+声明涵盖主要组件与上游来源，并非所有嵌入子组件的完整许可审计。
+重新打包或更换运行库时，请核对实际组件、上游声明及对应源代码要求。
+
+发行包中的 licenses/runtime-versions.json 与 licenses/FFmpeg-BUILD.txt 由构建过程生成，
+记录该平台实际使用的 Python、Qt/PySide6、FFmpeg 版本与配置。
+源码树原有 FFmpeg-BUILD.txt 是 Windows 参考记录，不代表 Linux/macOS 的构建配置。
 
 1. PySide6 / PySide6_Essentials / PySide6_Addons / Shiboken6 6.10.2
 --------------------------------------------------------------
 Copyright The Qt Company Ltd. and other contributors (see upstream source files).
-安装包元数据的许可表达式：LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only。
-此应用通过未修改的共享库使用 Qt for Python；本次使用 LGPL 选项。
-许可证文本：licenses\LGPL-3.0.txt、GPL-3.0.txt、GPL-2.0.txt。
-LGPL 3.0 文本包含对 GPL 3.0 的引用，因此同时提供 GPL 3.0 全文。
+包元数据许可表达式：LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only。
+此应用通过未修改的共享库使用 Qt for Python，采用 LGPL 选项。
+原文：licenses/LGPL-3.0.txt、GPL-3.0.txt、GPL-2.0.txt。
+LGPL 3.0 引用 GPL 3.0，因此同时附带 GPL 3.0 全文。
 
 项目：https://www.qt.io/qt-for-python
-对应源代码（PySide 与 Shiboken 同一仓库）：
+对应源代码（PySide 与 Shiboken 同仓库）：
 https://github.com/pyside/pyside-setup/tree/v6.10.2
 https://code.qt.io/cgit/pyside/pyside-setup.git/tree/?h=v6.10.2
 发布包：https://pypi.org/project/PySide6/6.10.2/
@@ -22,60 +27,64 @@ https://code.qt.io/cgit/pyside/pyside-setup.git/tree/?h=v6.10.2
 2. Qt 6.10.2
 ------------
 Copyright The Qt Company Ltd. and other contributors (see upstream source files).
-应用使用 Qt Core、Gui、Widgets、Multimedia、MultimediaWidgets 等模块。
-Qt 的开源模块有 LGPL/GPL 等不同许可选项，内含的第三方代码也可能使用独立许可证。
-本应用使用相关共享运行库的 LGPL 选项；这不表示 Qt 的每个模块或子组件都采用同一许可证。
-许可证文本：licenses\LGPL-3.0.txt、GPL-3.0.txt、GPL-2.0.txt。
+应用使用 Core、Gui、Widgets、Multimedia、MultimediaWidgets 等模块。
+Qt 开源模块有不同的 LGPL/GPL 等许可选项，嵌入第三方代码也可能有独立许可证。
+本应用使用相关共享运行库的 LGPL 选项，不表示 Qt 所有模块/子组件许可相同。
+原文：licenses/LGPL-3.0.txt、GPL-3.0.txt、GPL-2.0.txt。
 
-对应版本源代码及模块版本：
+对应版本与模块源码：
 https://code.qt.io/cgit/qt/qt5.git/tree/?h=v6.10.2
 https://download.qt.io/official_releases/qt/6.10/6.10.2/single/
-模块源码：https://github.com/qt/qtbase/tree/v6.10.2
+https://github.com/qt/qtbase/tree/v6.10.2
 https://github.com/qt/qtmultimedia/tree/v6.10.2
-第三方组件说明：https://doc.qt.io/qt-6/licenses-used-in-qt.html
+第三方说明：https://doc.qt.io/qt-6/licenses-used-in-qt.html
 
 3. FFmpeg 7.1.2
----------------
+--------------
 Copyright the FFmpeg developers; see individual source files.
-Qt for Python Windows 包附带的 avcodec-61.dll、avformat-61.dll、avutil-59.dll 等共享库
-提供音视频解码。通过库接口读取的版本为 7.1.2，许可为 LGPL version 2.1 or later。
-实际配置见 licenses\FFmpeg-BUILD.txt；本构建未启用 --enable-gpl。
-许可证文本：licenses\LGPL-2.1.txt；上游许可说明：licenses\FFmpeg-7.1.2-LICENSE.md。
-其构建使用 zlib 1.3.1，许可证另见 licenses\zlib-1.3.1-LICENSE.txt。
+Qt Multimedia 使用随 Qt for Python 分发的 FFmpeg 共享库解码音视频：Windows 为 DLL，
+Linux 为 .so，macOS 为 .dylib；请以实际包内文件及运行库记录为准。
+构建时通过库接口读取版本、许可和配置，写入 licenses/FFmpeg-BUILD.txt。
+这些发行包选用 LGPL 构建；原文在 licenses/LGPL-2.1.txt，
+上游完整说明在 licenses/FFmpeg-7.1.2-LICENSE.md。
+原 Windows 参考构建使用 zlib 1.3.1，其许可附于 licenses/zlib-1.3.1-LICENSE.txt；
+各平台是否启用相同外部组件应根据该平台实际构建配置和上游材料核对。
 
 对应源代码：https://github.com/FFmpeg/FFmpeg/tree/n7.1.2
 源码发布包：https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.xz
-项目与许可说明：https://ffmpeg.org/legal.html
-Qt 该版本构建配方：https://github.com/qt/qtmultimedia/tree/v6.10.2
-zlib 源代码：https://github.com/madler/zlib/tree/v1.3.1
+项目许可：https://ffmpeg.org/legal.html
+Qt 构建配方：https://github.com/qt/qtmultimedia/tree/v6.10.2
+zlib 源码：https://github.com/madler/zlib/tree/v1.3.1
 
-4. CPython 3.12.14（本次 Windows 便携版运行时）
---------------------------------------------
+4. CPython 3.12.14（发行包运行时）
+--------------------------------
 Copyright Python Software Foundation and other contributors.
-Python Software Foundation License Version 2 及其历史许可证，完整文本见
-licenses\Python-3.12.14-LICENSE.txt。源码安装时所用的 Python 版本可能不同。
-应用没有修改 CPython 本身。
+Python Software Foundation License Version 2 及历史许可证全文：
+licenses/Python-3.12.14-LICENSE.txt。
+从源码运行时 Python 版本可能不同。应用未修改 CPython。
 
 对应源代码：https://github.com/python/cpython/tree/v3.12.14
 源码发布包：https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tgz
 
-5. PyInstaller 6.20.0（打包工具及引导程序）
+5. PyInstaller 6.20.0（打包工具与引导程序）
 ----------------------------------------
 Copyright PyInstaller Development Team and other contributors.
-GPL version 2 or later，附带允许分发所生成应用的特别例外；部分文件采用独立许可。
-请以 licenses\PyInstaller-6.20.0-COPYING.txt 的完整条文为准。
-该工具用于生成便携版；应用源码不会因此整体改为 GPL。
+GPL version 2 or later，附带允许分发生成应用的特别例外；部分文件采用独立许可。
+完整原文：licenses/PyInstaller-6.20.0-COPYING.txt。
+用于生成发行包，不因此将应用全部源码改为 GPL。
 对应源代码：https://github.com/pyinstaller/pyinstaller/tree/v6.20.0
 
 替换、调试与重建
 --------------
-共享 DLL 保留在便携版 _internal 目录内；可在备份后用接口兼容的版本替换相关库进行调试。
-GridStudio 对第三方库的修改和为调试此类修改所需的逆向工程不施加额外限制；以各库许可证为准。
-原创应用源码及 build.ps1 可用于重新构建并与兼容库组合。源代码与第三方库请使用匹配版本。
-上面的上游链接是源码来源说明，不应被理解为对任何分发方式均已满足全部许可条件的保证。
+Windows/Linux 的共享库位于 _internal；macOS 在 .app/Contents 的 Frameworks 等目录。
+备份后可替换为接口兼容的库进行调试；macOS 修改 bundle 内容后需要重新完成本地签名，
+可使用公开构建脚本重新打包。保留库的实际文件、目录结构和符号链接。
+GridStudio 不对第三方库的修改或为调试修改所需的逆向工程施加额外限制，以各库许可为准。
+源码及 build.ps1 / build.sh / scripts/build.py 可用于与兼容库重新构建。
+上游链接说明源码来源，不构成所有分发方式都已满足全部许可条件的保证。
 
-许可证原文的精确下载来源
-----------------------
+许可证原文的下载来源
+--------------------
 LGPL-3.0.txt
 https://raw.githubusercontent.com/qt/qtbase/v6.10.2/LICENSES/LGPL-3.0-only.txt
 GPL-3.0.txt
@@ -93,9 +102,9 @@ https://raw.githubusercontent.com/pyinstaller/pyinstaller/v6.20.0/COPYING.txt
 zlib-1.3.1-LICENSE.txt
 https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE
 
-下载原文未改写，SHA-256 摘要与文件长度见 licenses\SOURCES.json。
+原文未翻译、未改写。文件长度和 SHA-256 摘要见 licenses/SOURCES.json。
 
 参考项目
 --------
 GridPlayer：https://github.com/vzhd1701/gridplayer
-GridStudio 参考其多画面使用理念，应用代码为独立实现，未包含 GridPlayer 源代码。
+仅参考多画面使用理念；GridStudio 独立实现，未包含 GridPlayer 源代码。

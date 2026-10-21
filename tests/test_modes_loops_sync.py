@@ -1,5 +1,7 @@
 """User-visible fill choices, saved state, and actual loop/sync playback."""
 
+import os
+
 import pytest
 from PySide6.QtCore import QPointF
 from PySide6.QtGui import QColor, QImage, QPainter
@@ -10,6 +12,20 @@ from test_app import drain_events, qapp, window
 from test_clean_mode import assert_video_only, menu_action
 from test_media import (current_frame, has_decoded_frame, load_pane, media_app,
                         media_window, sample_video, wait_ready, wait_until)
+
+
+def _sync_disposal_iterations():
+    variable = "GRIDSTUDIO_SYNC_DISPOSAL_REPEATS"
+    value = os.environ.get(variable, "1")
+    try:
+        count = int(value)
+    except ValueError:
+        raise pytest.UsageError(f"{variable} must be an integer between 1 and 100; got {value!r}") from None
+    if not 1 <= count <= 100:
+        raise pytest.UsageError(f"{variable} must be between 1 and 100; got {value!r}")
+    # Distinct parameter IDs guarantee real executions; repeated node IDs may
+    # be deduplicated by pytest even when collection reports many entries.
+    return [pytest.param(index, id=f"iteration-{index:02d}") for index in range(1, count + 1)]
 
 
 def feed_corners(canvas):
@@ -177,7 +193,8 @@ def test_whole_video_loop_returns_to_start(media_window, sample_video):
     assert pane.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
 
 
-def test_sync_group_links_seek_play_pause_rate_and_survives_leader_close(media_window, sample_video):
+@pytest.mark.parametrize("_iteration", _sync_disposal_iterations())
+def test_sync_group_links_seek_play_pause_rate_and_survives_leader_close(media_window, sample_video, _iteration):
     win = media_window
     first = load_pane(win, sample_video, position_ms=2000)
     wait_ready(first, position_ms=2000)

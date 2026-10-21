@@ -1,3 +1,9 @@
+REFERENCE ONLY: the Windows build originally inspected for this source tree.
+Each native release replaces this file with values queried from its own avutil
+library; see the packaged licenses/runtime-versions.json for the actual target.
+仅供参考：本源码树最初检查的 Windows 构建。每个平台的发布包都会从自身
+avutil 库重新读取并生成此文件；实际目标信息见包内 licenses/runtime-versions.json。
+
 FFmpeg bundled by PySide6 6.10.2 Windows x64
 =========================================
 

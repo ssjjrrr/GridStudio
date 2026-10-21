@@ -8,7 +8,8 @@ from collections import Counter
 
 import pytest
 from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtTest import QSignalSpy
+from scripts.qt_test_support import qt_wait
 
 from gridstudio.playback import PlaybackController
 from test_playback_engine import FakePlayer, Owner, application
@@ -126,7 +127,7 @@ def test_idle_clock_has_no_timeout_wakeups(perf_rig):
     owner.add("native-loop", paused=False)
     controller.refresh_activity()
     timeouts = QSignalSpy(controller.timer.timeout)
-    QTest.qWait(70)
+    qt_wait(70)
     assert timeouts.count() == 0
 
 

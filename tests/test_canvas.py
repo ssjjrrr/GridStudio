@@ -2,13 +2,14 @@
 
 import os
 
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QPointF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter
 from PySide6.QtMultimedia import QVideoFrame
 from PySide6.QtTest import QTest
+from scripts.qt_test_support import qt_wait
 from PySide6.QtWidgets import QApplication
 
 from gridstudio.canvas import VideoCanvas
@@ -22,7 +23,7 @@ def canvas_app():
 
 def drain(app):
     app.processEvents()
-    QTest.qWait(5)
+    qt_wait(5)
     app.processEvents()
 
 

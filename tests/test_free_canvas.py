@@ -11,7 +11,10 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog, QDoubleSpinBox, QMessageBox
 
 from gridstudio.app import MainWindow
-from test_app import drain_events, qapp
+from test_app import (
+    click_pointer, drain_events, move_pointer, native_pointer_driver,
+    press_pointer, qapp, release_pointer,
+)
 from test_media import current_frame, load_pane, sample_video, wait_ready, wait_until
 from test_seamless import feed_solid, matches
 
@@ -26,7 +29,9 @@ def canvas_window(qapp, monkeypatch):
     win.resize(1000, 700)
     win.show()
     drain_events(qapp)
-    yield win
+    with native_pointer_driver(win, qapp):
+        yield win
+    monkeypatch.undo()
     if shiboken6.isValid(win):
         win.close()
         win.deleteLater()
@@ -82,8 +87,13 @@ def test_tab_edits_without_per_video_controls_and_escape_cleans_picture(canvas_w
     pane.state.fit_mode = "stretch"
     pane.apply_state()
     feed_solid(pane.canvas, "red")
+    # X11 activation arrives asynchronously as FocusIn. A synthetic key sent
+    # before that event cannot trigger the real window-scoped Tab shortcut.
+    assert QTest.qWaitForWindowExposed(win, 5000), "Canvas window was not exposed"
     win.activateWindow()
+    assert QTest.qWaitForWindowActive(win, 5000), "Canvas window did not gain keyboard activation"
     pane.canvas.setFocus()
+    wait_until(pane.canvas.hasFocus, "canvas keyboard focus", timeout_ms=5000)
     QTest.keyClick(pane.canvas.viewport(), Qt.Key.Key_Tab)
     drain_events(qapp)
     assert not win.clean_mode
@@ -113,11 +123,11 @@ def test_mouse_moves_video_freely_in_both_axes_without_changing_size(canvas_wind
     start = target.rect().center()
     delta = QPoint(77, 43)
     end_global = target.mapToGlobal(start) + delta
-    QTest.mousePress(target, Qt.MouseButton.LeftButton, pos=start)
-    QTest.mouseMove(target, target.mapFromGlobal(end_global), delay=20)
+    press_pointer(target, Qt.MouseButton.LeftButton, pos=start)
+    move_pointer(target, target.mapFromGlobal(end_global), delay=20)
     # The viewport has moved under the pointer, so recompute its local release
     # point rather than accidentally moving the mouse a second time.
-    QTest.mouseRelease(target, Qt.MouseButton.LeftButton, pos=target.mapFromGlobal(end_global))
+    release_pointer(target, Qt.MouseButton.LeftButton, pos=target.mapFromGlobal(end_global))
     drain_events(qapp)
     after = pane.geometry()
     assert after.x() == pytest.approx(before.x() + delta.x(), abs=2)
@@ -142,9 +152,9 @@ def test_mouse_resizes_edges_and_corner_independently(canvas_window, qapp, edge)
                    1 if top else rect.bottom() - 1 if bottom else rect.center().y())
     delta = QPoint(-59 if left else 69 if right else 0, -31 if top else 41 if bottom else 0)
     end_global = target.mapToGlobal(start) + delta
-    QTest.mousePress(target, Qt.MouseButton.LeftButton, pos=start)
-    QTest.mouseMove(target, target.mapFromGlobal(end_global), delay=20)
-    QTest.mouseRelease(target, Qt.MouseButton.LeftButton, pos=target.mapFromGlobal(end_global))
+    press_pointer(target, Qt.MouseButton.LeftButton, pos=start)
+    move_pointer(target, target.mapFromGlobal(end_global), delay=20)
+    release_pointer(target, Qt.MouseButton.LeftButton, pos=target.mapFromGlobal(end_global))
     drain_events(qapp)
     after = pane.geometry()
     assert after.x() == pytest.approx(before.x() + (delta.x() if left else 0), abs=2)
@@ -165,9 +175,9 @@ def test_crop_gesture_in_edit_mode_changes_source_crop_instead_of_layer_rect(can
     original_rect = pane.state.canvas_rect
     start = canvas.mapFromScene(QPointF(80, 40))
     end = canvas.mapFromScene(QPointF(300, 160))
-    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, pos=start)
-    QTest.mouseMove(canvas.viewport(), end, delay=20)
-    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, pos=end)
+    press_pointer(canvas.viewport(), Qt.MouseButton.LeftButton, pos=start)
+    move_pointer(canvas.viewport(), end, delay=20)
+    release_pointer(canvas.viewport(), Qt.MouseButton.LeftButton, pos=end)
     drain_events(qapp)
     assert not canvas.crop_active
     assert pane.state.crop == pytest.approx((.2, .2, .55, .6), abs=.015)
@@ -182,9 +192,9 @@ def test_clean_playback_click_and_drag_dont_move_or_resize_video(canvas_window, 
     expected = pane.state.canvas_rect
     target = pane.canvas.viewport()
     start = target.rect().center()
-    QTest.mousePress(target, Qt.MouseButton.LeftButton, pos=start)
-    QTest.mouseMove(target, start + QPoint(50, 40), delay=20)
-    QTest.mouseRelease(target, Qt.MouseButton.LeftButton, pos=start + QPoint(50, 40))
+    press_pointer(target, Qt.MouseButton.LeftButton, pos=start)
+    move_pointer(target, start + QPoint(50, 40), delay=20)
+    release_pointer(target, Qt.MouseButton.LeftButton, pos=start + QPoint(50, 40))
     drain_events(qapp)
     assert pane.state.canvas_rect == expected
     assert win.clean_mode
@@ -243,7 +253,7 @@ def test_select_fully_covered_layer_via_menu_never_raises_it(canvas_window, qapp
     menu.deleteLater()
     # Picking an exposed part of the rear image also preserves stacking.
     win.canvas_workspace.set_rect(green.state.id, (.3, .3, .6, .6))
-    QTest.mouseClick(red.canvas.viewport(), Qt.MouseButton.LeftButton, pos=QPoint(20, 20))
+    click_pointer(red.canvas.viewport(), Qt.MouseButton.LeftButton, pos=QPoint(20, 20))
     drain_events(qapp)
     assert win.active_id == red.state.id
     assert {pid: pane.state.z_order for pid, pane in win.panes.items()} == expected

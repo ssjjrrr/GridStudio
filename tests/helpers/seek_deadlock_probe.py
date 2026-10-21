@@ -38,7 +38,7 @@ def run(options):
     from PySide6.QtCore import QMetaObject, QObject, QThread, QTimer, QUrl, Qt, Q_ARG, SIGNAL, SLOT, qVersion
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtMultimedia import QMediaPlayer, QVideoSink
-    from PySide6.QtTest import QTest
+    from scripts.qt_test_support import qt_wait
     import shiboken6
     from gridstudio.media_commands import media_command
 
@@ -65,7 +65,7 @@ def run(options):
         while time.monotonic() < deadline:
             if predicate():
                 return
-            QTest.qWait(10)
+            qt_wait(10)
         raise RuntimeError("Timed out: " + description)
 
     app = QGuiApplication([])

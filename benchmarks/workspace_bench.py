@@ -23,11 +23,12 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = args.platform
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
     sys.path.insert(0, str(args.project.resolve()))
     from PySide6.QtCore import QCoreApplication, QEvent, QObject
     from PySide6.QtGui import QColor, QImage
     from PySide6.QtMultimedia import QVideoFrame
-    from PySide6.QtTest import QTest
+    from scripts.qt_test_support import qt_wait
     from PySide6.QtWidgets import QApplication
     from gridstudio.app import MainWindow, STYLE
     from gridstudio import __version__
@@ -97,7 +98,7 @@ def main():
         pane.player.duration = lambda: queries.update(duration=1) or 12000
     if hasattr(win.playback, "refresh_activity"):
         win.playback.refresh_activity()
-    QTest.qWait(300)
+    qt_wait(300)
     output = {
         "version": __version__, "platform": app.platformName(), "panes": len(originals),
         "membership_cycles": args.cycles, "membership_ms": membership_ms,

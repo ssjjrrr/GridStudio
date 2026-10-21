@@ -1,5 +1,7 @@
 # 测试媒体
 
+**简体中文** | [English](test-media.en.md)
+
 `tests/fixtures/sample.mp4` 与 `sample-short.mp4` 是本项目生成的合成测试视频，用于真实解码、定位、循环和同步回归。`demo/` 下同名文件是它们的副本，未使用影视片段或用户视频。项目原创测试材料按仓库 MIT 许可证分发；编码和解码工具的许可证见其各自声明。
 
 | 文件 | 时长 | 视频 | 音频 |
@@ -22,6 +24,8 @@ ffmpeg -nostdin -n -f lavfi -i 'testsrc2=size=640x360:rate=24:duration=12' -f la
 
 ffmpeg -nostdin -n -f lavfi -i 'testsrc2=size=640x360:rate=24:duration=6' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=6' -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -t 6 -movflags +faststart artifacts\media\sample-short.mp4
 ```
+
+Linux/macOS 可先用 `mkdir -p artifacts/media` 建立目录，再运行相同 FFmpeg 命令，将输出路径改为 `artifacts/media/sample.mp4` 与 `artifacts/media/sample-short.mp4`。这些命令只生成测试素材，不用于构建或运行播放器。
 
 更换版本控制内的样例时，保持 `tests/fixtures/` 与 `demo/` 的同名文件一致，并重新检查所有 `.gstudio` 示例、真实播放测试和媒体基准。现有演示工作区使用相对路径，移动时保留同目录 MP4 即可。
 

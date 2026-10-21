@@ -3,7 +3,7 @@
 from collections import Counter
 
 import shiboken6
-from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, Qt
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QPoint, QPointF, QRect, Qt
 from PySide6.QtGui import QColor, QCursor, QImage, QRegion
 from PySide6.QtMultimedia import QVideoFrame
 from PySide6.QtTest import QTest
@@ -158,6 +158,9 @@ def test_hidden_hover_position_updates_store_data_without_formatting_or_repaint(
         for position in range(2401, 10001):
             clock["position"] = position
             pane.player.positionChanged.emit(position)
+        # Media-driven UI updates are queued outside native decoder commands.
+        # Deliver that work before checking its hidden-control repaint budget.
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.MetaCall)
         assert hover.bar._position == 10000
         assert calls == {}, calls
         assert not hover.hide_timer.isActive()

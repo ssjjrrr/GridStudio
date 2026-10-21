@@ -7,6 +7,8 @@ feedback.  The timer only handles A/B boundaries and meaningful playback drift.
 
 from __future__ import annotations
 
+from .i18n import tr
+
 import time
 from contextlib import contextmanager
 
@@ -294,7 +296,7 @@ class PlaybackController(QObject):
         members = self._members(pane)
         rates = self._rates(members, pane, rate)
         if rates is None:
-            self._notify("这些视频时长差异过大，所选速度无法保持百分比同步（支持 0.1–8 倍速）")
+            self._notify(tr('这些视频时长差异过大，所选速度无法保持百分比同步（支持 0.1–8 倍速）'))
             return False
         self._lead(pane)
         for member in members:
@@ -324,7 +326,7 @@ class PlaybackController(QObject):
             minimum = max(0.1 * leader_duration / d for d in lengths)
             maximum = min(8.0 * leader_duration / d for d in lengths)
             if minimum > maximum:
-                self._notify("这些视频时长差异过大，无法在 0.1–8 倍速内保持百分比同步")
+                self._notify(tr('这些视频时长差异过大，无法在 0.1–8 倍速内保持百分比同步'))
                 return False
             leader.state.rate = min(maximum, max(minimum, leader.state.rate))
         leader_position = self._current(leader)
@@ -441,7 +443,7 @@ class PlaybackController(QObject):
             maximum = min(8.0 * leader_duration / d for d in lengths)
             if minimum > maximum:
                 self.leave_group([pane_id])
-                self._notify("视频时长差异过大，刚载入的视频已退出百分比同步（支持 0.1–8 倍速）")
+                self._notify(tr('视频时长差异过大，刚载入的视频已退出百分比同步（支持 0.1–8 倍速）'))
                 return
             leader.state.rate = min(maximum, max(minimum, leader.state.rate))
         self._align(members, leader, durations=durations)

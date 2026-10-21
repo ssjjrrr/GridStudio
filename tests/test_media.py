@@ -3,16 +3,17 @@
 import os
 from pathlib import Path
 
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 import shiboken6
 from PySide6.QtCore import QCoreApplication, QElapsedTimer, QEvent
 from PySide6.QtMultimedia import QMediaFormat, QMediaMetaData, QMediaPlayer
-from PySide6.QtTest import QTest
+from scripts.qt_test_support import qt_wait
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from gridstudio.app import MainWindow
+import gridstudio.playback as playback_module
 
 
 @pytest.fixture(scope="session")
@@ -39,6 +40,7 @@ def media_window(media_app, monkeypatch):
     window.show()
     media_app.processEvents()
     yield window
+    monkeypatch.undo()
     window.close()
     window.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
@@ -60,7 +62,7 @@ def wait_until(predicate, message, *, panes=(), timeout_ms=8000):
     while timer.elapsed() < timeout_ms:
         if predicate():
             return
-        QTest.qWait(20)
+        qt_wait(20)
     detail = "; ".join(description(pane) for pane in panes)
     pytest.fail(f"Timed out waiting for {message}: {detail}")
 
@@ -103,7 +105,7 @@ def load_pane(window, sample, *, position_ms=0, paused=True):
     return pane
 
 
-def test_real_h264_opens_paused_with_a_decoded_frame_and_seeks_while_paused(media_window, sample_video):
+def test_real_h264_opens_paused_with_a_decoded_frame_and_seeks_while_paused(media_window, media_app, sample_video, monkeypatch):
     pane = load_pane(media_window, sample_video)
     wait_ready(pane, position_ms=0)
     assert pane.player.duration() == pytest.approx(12000, abs=100)
@@ -112,12 +114,39 @@ def test_real_h264_opens_paused_with_a_decoded_frame_and_seeks_while_paused(medi
     assert frame.width() > 0 and frame.height() > 0
     assert not frame.toImage().isNull()
 
+    media_app.processEvents()
+    native_command_active = False
+    ui_updates = []
+    original_command = playback_module.media_command
+    original_set_value = pane.timeline.setValue
+
+    def native_command(*args):
+        nonlocal native_command_active
+        native_command_active = True
+        try:
+            return original_command(*args)
+        finally:
+            native_command_active = False
+
+    def update_timeline(position):
+        ui_updates.append((position, native_command_active))
+        return original_set_value(position)
+
+    monkeypatch.setattr(playback_module, "media_command", native_command)
+    monkeypatch.setattr(pane.timeline, "setValue", update_timeline)
     media_window.playback.seek(pane.state.id, 3000)
+    # Seeking remains synchronous, but widgets must update on the next event
+    # loop turn. A synchronous positionChanged -> QSlider.setValue callback
+    # blocked inside the native seek in the macOS ARM regression.
+    assert pane.player.position() == pytest.approx(3000, abs=50)
+    assert ui_updates == []
     wait_until(lambda: abs(pane.player.position() - 3000) <= 50
-               and has_decoded_frame(pane, 3000),
+               and has_decoded_frame(pane, 3000)
+               and abs(pane.timeline.value() - 3000) <= 50,
                "a new decoded frame after a paused seek", panes=[pane])
+    assert ui_updates and all(not inside_command for _, inside_command in ui_updates)
     assert pane.player.playbackState() == QMediaPlayer.PlaybackState.PausedState
-    QTest.qWait(150)
+    qt_wait(150)
     assert pane.player.position() == pytest.approx(3000, abs=50)
 
 
@@ -208,5 +237,5 @@ def test_play_all_and_pause_all_control_both_real_players(media_window, sample_v
                           for pane in (original, duplicate)),
                "all players paused", panes=[original, duplicate])
     positions = [pane.player.position() for pane in (original, duplicate)]
-    QTest.qWait(150)
+    qt_wait(150)
     assert [pane.player.position() for pane in (original, duplicate)] == positions

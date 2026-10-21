@@ -1,0 +1,107 @@
+{
+  "format": "gridstudio",
+  "version": 1,
+  "panes": [
+    {
+      "id": "95e5d3f3ec184a7e94ddd59c84500e50",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "contain",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    },
+    {
+      "id": "5f26958a7a7f4d3280dbee1e99a02291",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "cover",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    },
+    {
+      "id": "c9a5d9ce31154379a9714273237fdb8c",
+      "source": "sample.mp4",
+      "rotation": 0,
+      "crop": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "fit_mode": "stretch",
+      "flip_h": false,
+      "flip_v": false,
+      "position_ms": 3000,
+      "rate": 1.0,
+      "volume": 0.5,
+      "muted": true,
+      "loop": true,
+      "loop_start_ms": 0,
+      "loop_end_ms": null,
+      "paused": true,
+      "sync_group": "",
+      "sync_mode": "time",
+      "sync_offset_ms": 0,
+      "canvas_rect": null,
+      "z_order": 0
+    }
+  ],
+  "layout": {
+    "axis": "horizontal",
+    "sizes": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "children": [
+      {
+        "pane": "95e5d3f3ec184a7e94ddd59c84500e50"
+      },
+      {
+        "pane": "5f26958a7a7f4d3280dbee1e99a02291"
+      },
+      {
+        "pane": "c9a5d9ce31154379a9714273237fdb8c"
+      }
+    ]
+  },
+  "layout_mode": "grid"
+}

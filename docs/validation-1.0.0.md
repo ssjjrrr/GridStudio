@@ -1,5 +1,7 @@
 # GridStudio 1.0.0 验证记录
 
+**简体中文** | [English](validation-1.0.0.en.md)
+
 验证日期：**2026-10-22**。环境为本机 Windows 11 x64、Python 3.12.14、PySide6/Qt 6.10.2。
 
 本记录区分发布前既有的功能回归与正式版重新构建验证。远程 CI 状态见[仓库 Actions](https://github.com/ssjjrrr/GridStudio/actions)。

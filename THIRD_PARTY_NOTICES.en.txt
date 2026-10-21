@@ -1,0 +1,115 @@
+GridStudio · Third-party notices
+===============================
+English; 简体中文：THIRD_PARTY_NOTICES.txt
+
+Original GridStudio application code is MIT licensed. The components below and their copyrights,
+trademarks, and licenses belong to their respective holders. This document covers principal components
+and upstream sources, not a complete license audit of every embedded subcomponent. When repackaging
+or changing libraries, check the actual components, upstream notices, and corresponding-source requirements.
+
+licenses/runtime-versions.json and licenses/FFmpeg-BUILD.txt in a release package are generated during
+its build and record the actual Python, Qt/PySide6, and FFmpeg versions/configuration for that platform.
+The original FFmpeg-BUILD.txt in the source tree is a Windows reference, not a Linux/macOS configuration record.
+
+1. PySide6 / PySide6_Essentials / PySide6_Addons / Shiboken6 6.10.2
+--------------------------------------------------------------
+Copyright The Qt Company Ltd. and other contributors (see upstream source files).
+Package metadata license expression: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only.
+This application uses unmodified Qt for Python shared libraries under the LGPL option.
+Original texts: licenses/LGPL-3.0.txt, GPL-3.0.txt, and GPL-2.0.txt.
+LGPL 3.0 references GPL 3.0, so the full GPL 3.0 text is also provided.
+
+Project: https://www.qt.io/qt-for-python
+Corresponding source (PySide and Shiboken share a repository):
+https://github.com/pyside/pyside-setup/tree/v6.10.2
+https://code.qt.io/cgit/pyside/pyside-setup.git/tree/?h=v6.10.2
+Packages: https://pypi.org/project/PySide6/6.10.2/
+
+2. Qt 6.10.2
+------------
+Copyright The Qt Company Ltd. and other contributors (see upstream source files).
+The application uses Core, Gui, Widgets, Multimedia, MultimediaWidgets, and related modules.
+Open-source Qt modules offer different LGPL/GPL and other license options; embedded third-party code
+may have separate licenses. This application uses the LGPL option for relevant shared libraries.
+That does not mean every Qt module or subcomponent has the same license.
+Original texts: licenses/LGPL-3.0.txt, GPL-3.0.txt, and GPL-2.0.txt.
+
+Corresponding version and module sources:
+https://code.qt.io/cgit/qt/qt5.git/tree/?h=v6.10.2
+https://download.qt.io/official_releases/qt/6.10/6.10.2/single/
+https://github.com/qt/qtbase/tree/v6.10.2
+https://github.com/qt/qtmultimedia/tree/v6.10.2
+Third-party notices: https://doc.qt.io/qt-6/licenses-used-in-qt.html
+
+3. FFmpeg 7.1.2
+--------------
+Copyright the FFmpeg developers; see individual source files.
+Qt Multimedia decodes through FFmpeg shared libraries distributed with Qt for Python: DLL files on
+Windows, .so files on Linux, and .dylib files on macOS. Consult the actual package and runtime records.
+Build scripts query the library interfaces for version, license, and configuration and record them
+in licenses/FFmpeg-BUILD.txt. These release packages use LGPL builds. The original LGPL text is in
+licenses/LGPL-2.1.txt; the upstream license statement is licenses/FFmpeg-7.1.2-LICENSE.md.
+The original Windows reference build uses zlib 1.3.1, with its license in licenses/zlib-1.3.1-LICENSE.txt.
+Check each platform's actual configuration and upstream materials for its enabled external components.
+
+Corresponding source: https://github.com/FFmpeg/FFmpeg/tree/n7.1.2
+Source release: https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.xz
+Project licensing: https://ffmpeg.org/legal.html
+Qt build recipes: https://github.com/qt/qtmultimedia/tree/v6.10.2
+zlib source: https://github.com/madler/zlib/tree/v1.3.1
+
+4. CPython 3.12.14 (release package runtime)
+-----------------------------------------
+Copyright Python Software Foundation and other contributors.
+Python Software Foundation License Version 2 and historical licenses are reproduced in full in
+licenses/Python-3.12.14-LICENSE.txt. Source installations may use a different Python version.
+The application does not modify CPython.
+
+Corresponding source: https://github.com/python/cpython/tree/v3.12.14
+Source release: https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tgz
+
+5. PyInstaller 6.20.0 (packager and bootloader)
+--------------------------------------------
+Copyright PyInstaller Development Team and other contributors.
+GPL version 2 or later, with a special exception permitting distribution of generated applications;
+some files have separate licenses. See the full text in licenses/PyInstaller-6.20.0-COPYING.txt.
+Using this packaging tool does not make all application source GPL licensed.
+Corresponding source: https://github.com/pyinstaller/pyinstaller/tree/v6.20.0
+
+Replacement, debugging, and rebuilding
+-------------------------------------
+Shared libraries are under _internal on Windows/Linux and directories such as Frameworks inside
+.app/Contents on macOS. After making a backup, you can replace libraries with interface-compatible
+versions for debugging. Modifying a macOS bundle requires local signing again; the published build
+scripts can rebuild it. Preserve the real library files, directory structure, and symbolic links.
+GridStudio imposes no extra restriction on modifying third-party libraries or reverse engineering
+needed to debug such modifications; each library's license applies. Source and build.ps1 / build.sh /
+scripts/build.py can be used to rebuild with compatible libraries. Upstream links identify source
+locations; they do not guarantee that every distribution method meets all licensing obligations.
+
+Original license text download sources
+--------------------------------------
+LGPL-3.0.txt
+https://raw.githubusercontent.com/qt/qtbase/v6.10.2/LICENSES/LGPL-3.0-only.txt
+GPL-3.0.txt
+https://raw.githubusercontent.com/qt/qtbase/v6.10.2/LICENSES/GPL-3.0-only.txt
+GPL-2.0.txt
+https://raw.githubusercontent.com/qt/qtbase/v6.10.2/LICENSES/GPL-2.0-only.txt
+LGPL-2.1.txt
+https://raw.githubusercontent.com/FFmpeg/FFmpeg/n7.1.2/COPYING.LGPLv2.1
+FFmpeg-7.1.2-LICENSE.md
+https://raw.githubusercontent.com/FFmpeg/FFmpeg/n7.1.2/LICENSE.md
+Python-3.12.14-LICENSE.txt
+https://raw.githubusercontent.com/python/cpython/v3.12.14/LICENSE
+PyInstaller-6.20.0-COPYING.txt
+https://raw.githubusercontent.com/pyinstaller/pyinstaller/v6.20.0/COPYING.txt
+zlib-1.3.1-LICENSE.txt
+https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE
+
+Original texts are not translated or rewritten. Byte lengths and SHA-256 hashes are in licenses/SOURCES.json.
+
+Reference project
+-----------------
+GridPlayer: https://github.com/vzhd1701/gridplayer
+Its multi-video workflow inspired GridStudio. GridStudio is independently implemented and does not
+include GridPlayer source code.
